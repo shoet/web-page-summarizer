@@ -1,0 +1,76 @@
+service: web-page-summarizer
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: go1.x
+
+  stage: dev
+  region: ap-northeast-1
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Scan
+        - dynamodb:Query
+      Resource: "*"
+
+package:
+  patterns:
+    - "!./**"
+    - ./bin/**
+
+functions:
+  health:
+    handler: bin/health
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+          # private: true
+
+  get-summary:
+    handler: bin/get-summary
+    events:
+      - http:
+          path: /get-summary
+          method: post
+          cors: true
+          # private: true
+  task:
+    handler: bin/task
+    events:
+      - http:
+          path: /task
+          method: post
+          cors: true
+          # private: true
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    summaryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: web_page_summary
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+# TODO: sqs
+
+#  Outputs:
+#     NewOutput:
+#       Description: "Description for the output"
+#       Value: "Some output value"
