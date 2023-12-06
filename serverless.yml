@@ -68,8 +68,28 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-# TODO: sqs
 
+    taskQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: web_page_summary_queue
+        # ContentBasedDeduplication: Boolean
+        # DeduplicationScope: String
+        # DelaySeconds: 0
+        # FifoQueue: false
+        # FifoThroughputLimit: String
+        # KmsDataKeyReusePeriodSeconds: Integer
+        # KmsMasterKeyId: String
+        # MaximumMessageSize: 262144
+        # MessageRetentionPeriod: 345600
+        # ReceiveMessageWaitTimeSeconds: 0
+        # RedriveAllowPolicy: Json
+        # RedrivePolicy: Json
+        # SqsManagedSseEnabled: Boolean
+        # VisibilityTimeout: 30
+        Tags:
+          - Key: Name
+            Value: web_page_summary
 #  Outputs:
 #     NewOutput:
 #       Description: "Description for the output"
