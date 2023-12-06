@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
@@ -70,5 +71,29 @@ func DeleteSQSQueueForTest(
 		return fmt.Errorf("failed DeleteQueue: %w", err)
 	}
 
+	return nil
+}
+
+func CreateDynamoDBForTest(
+	ctx context.Context, awsCfg aws.Config, input *dynamodb.CreateTableInput,
+) error {
+	client := dynamodb.NewFromConfig(awsCfg)
+	_, err := client.CreateTable(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed Create DynamoDB: %w", err)
+	}
+	return nil
+}
+
+func DropDynamoDBForTest(
+	ctx context.Context, awsCfg aws.Config, tableName string,
+) error {
+	client := dynamodb.NewFromConfig(awsCfg)
+	_, err := client.DeleteTable(ctx, &dynamodb.DeleteTableInput{
+		TableName: aws.String(tableName),
+	})
+	if err != nil {
+		return fmt.Errorf("failed Delete DynamoDB: %w", err)
+	}
 	return nil
 }
