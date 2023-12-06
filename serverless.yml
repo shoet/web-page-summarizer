@@ -19,6 +19,16 @@ provider:
         - dynamodb:Scan
         - dynamodb:Query
       Resource: "*"
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueUrl
+      Resource:
+        Fn::GetAtt:
+          - taskQueue
+          - Arn
 
 package:
   patterns:
@@ -51,6 +61,8 @@ functions:
           method: post
           cors: true
           # private: true
+    environment:
+      QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
 
 # you can add CloudFormation resource templates here
 resources:
