@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.29.2
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/go-playground/validator/v10 v10.16.0
+	github.com/google/go-cmp v0.5.8
 	github.com/google/uuid v1.4.0
 )
 
