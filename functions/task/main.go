@@ -54,9 +54,9 @@ func Handler(ctx context.Context, request entities.Request) (entities.Response, 
 	// register task to dynamodb taskId,status(request),pageurl
 	id := uuid.New().String()
 	newSummaryTask := &entities.Summary{
-		Id:     id,
-		Url:    body.Url,
-		Status: "request",
+		Id:         id,
+		PageUrl:    body.Url,
+		TaskStatus: "request",
 	}
 	_, err = repository.CreateSummary(ctx, newSummaryTask)
 	if err != nil {
