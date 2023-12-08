@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -95,19 +96,44 @@ func main() {
 		wg.Add(1)
 		go func(taskId string) {
 			defer wg.Done()
-			err := tasker.ExecuteSummaryTask(ctx, taskId)
+			// err := tasker.ExecuteSummaryTask(ctx, taskId)
+			err := withExecTimeout(func() error {
+				return tasker.ExecuteSummaryTask(ctx, taskId)
+			}, time.Second*time.Duration(cfg.ExecTimeout))
 			if err != nil {
-				// if failed task update dynamodb status failed
+				// タスク失敗時の処理
 				if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
-					Id:               t,
+					Id:               taskId,
 					TaskStatus:       "failed",
 					TaskFailedReason: err.Error(),
 				}); err != nil {
-					fmt.Printf("failed to update summary [%s]: %v\n", t, err)
+					fmt.Printf("failed to update summary [%s]: %v\n", taskId, err)
 				}
+				fmt.Printf("task is failed [%s]: %v\n", taskId, err)
+				return
 			}
-
+			fmt.Printf("task is complete [%s]\n", taskId)
+			return
 		}(t)
 	}
 	wg.Wait()
+}
+
+func withExecTimeout(fn func() error, duration time.Duration) error {
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), duration)
+	defer cancel()
+	go func() {
+		fn()
+		cancel()
+	}()
+	for {
+		time.Sleep(10 * time.Microsecond)
+		select {
+		case <-ctxTimeout.Done():
+			if ctxTimeout.Err() == context.Canceled {
+				return nil
+			}
+			return fmt.Errorf("task is timeout: %s", ctxTimeout.Err())
+		}
+	}
 }

@@ -11,6 +11,7 @@ type Config struct {
 	BrowserPath    string `env:"BROWSER_PATH"`
 	OpenAIApiKey   string `env:"OPENAI_API_KEY"`
 	MaxTaskExecute int    `env:"MAX_TASK_EXECUTE" envDefault:"20"`
+	ExecTimeout    int    `env:"EXEC_TIMEOUT_SEC" envDefault:"300"`
 }
 
 func NewConfig() (*Config, error) {
