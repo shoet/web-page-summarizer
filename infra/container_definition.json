@@ -1,0 +1,46 @@
+[
+  {
+    "name": "web-page-summrizer",
+    "image": "{{.AwsAccountId}}.dkr.ecr.{{.Region}}.amazonaws.com/web-page-summarizer-task:latest",
+    "cpu": 0,
+    "portMappings": [
+      {
+        "name": "crawler-80-tcp",
+        "containerPort": 80,
+        "hostPort": 80,
+        "protocol": "tcp",
+        "appProtocol": "http"
+      }
+    ],
+    "essential": true,
+    "secrets": [
+      {
+        "name": "QUEUE_URL",
+        "valueFrom": "/web-page-summarizer/task/QUEUE_URL"
+      },
+      {
+        "name": "BROWSER_PATH",
+        "valueFrom": "/web-page-summarizer/task/BROWSER_PATH"
+      },
+      {
+        "name": "OPENAI_API_KEY",
+        "valueFrom": "/web-page-summarizer/task/OPENAI_API_KEY"
+      },
+      {
+        "name": "MAX_TASK_EXECUTE",
+        "valueFrom": "/web-page-summarizer/task/MAX_TASK_EXECUTE"
+      }
+    ],
+    "mountPoints": [],
+    "volumesFrom": [],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-create-group": "true",
+        "awslogs-group": "/ecs/web-page-summrizer",
+        "awslogs-region": "{{.Region}}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]
