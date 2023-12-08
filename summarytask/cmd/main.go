@@ -76,46 +76,51 @@ func main() {
 
 	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
 
-	// dequeue taskId from sqs
 	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
-	tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
-	if err != nil {
-		FailExit(err)
-	}
 
-	if len(tasks) == 0 {
-		fmt.Println("no task")
-		return
-	}
+	// TODO: graceful shutdown
+	for {
+		// sqs long polling
+		tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
+		if err != nil {
+			fmt.Printf("failed to fetch task: %v\n", err)
+			continue
+		}
 
-	fmt.Println("Pull task:")
-	fmt.Println(strings.Join(tasks, "\n"))
+		if len(tasks) == 0 {
+			fmt.Println("no task")
+			continue
+		}
 
-	var wg sync.WaitGroup
-	for _, t := range tasks {
-		wg.Add(1)
-		go func(taskId string) {
-			defer wg.Done()
-			err := withExecTimeout(ctx, func() error {
-				return tasker.ExecuteSummaryTask(ctx, taskId)
-			}, time.Second*time.Duration(cfg.ExecTimeout))
-			if err != nil {
-				// タスク失敗時の処理
-				if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
-					Id:               taskId,
-					TaskStatus:       "failed",
-					TaskFailedReason: err.Error(),
-				}); err != nil {
-					fmt.Printf("failed to update summary [%s]: %v\n", taskId, err)
+		fmt.Println("Pull task:")
+		fmt.Println(strings.Join(tasks, "\n"))
+
+		var wg sync.WaitGroup
+		for _, t := range tasks {
+			wg.Add(1)
+			go func(taskId string) {
+				defer wg.Done()
+				err := withExecTimeout(ctx, func() error {
+					return tasker.ExecuteSummaryTask(ctx, taskId)
+				}, time.Second*time.Duration(cfg.ExecTimeout))
+				if err != nil {
+					// タスク失敗時の処理
+					if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
+						Id:               taskId,
+						TaskStatus:       "failed",
+						TaskFailedReason: err.Error(),
+					}); err != nil {
+						fmt.Printf("failed to update summary [%s]: %v\n", taskId, err)
+					}
+					fmt.Printf("task is failed [%s]: %v\n", taskId, err)
+					return
 				}
-				fmt.Printf("task is failed [%s]: %v\n", taskId, err)
+				fmt.Printf("task is complete [%s]\n", taskId)
 				return
-			}
-			fmt.Printf("task is complete [%s]\n", taskId)
-			return
-		}(t)
+			}(t)
+		}
+		wg.Wait()
 	}
-	wg.Wait()
 }
 
 func withExecTimeout(ctx context.Context, fn func() error, duration time.Duration) error {

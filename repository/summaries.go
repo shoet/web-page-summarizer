@@ -32,6 +32,7 @@ func (r *SummaryRepository) GetSummary(
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{Value: id},
 		},
+		AttributesToGet: []string{"id", "task_status", "page_url", "summary"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed GetItem: %w", err)

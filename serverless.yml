@@ -94,7 +94,7 @@ resources:
         # KmsMasterKeyId: String
         # MaximumMessageSize: 262144
         # MessageRetentionPeriod: 345600
-        # ReceiveMessageWaitTimeSeconds: 0
+        ReceiveMessageWaitTimeSeconds: 20
         # RedriveAllowPolicy: Json
         # RedrivePolicy: Json
         # SqsManagedSseEnabled: Boolean
