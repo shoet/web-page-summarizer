@@ -39,8 +39,6 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 	if err != nil {
 		return fmt.Errorf("failed to get summary: %w", err)
 	}
-	fmt.Println("get summary: ")
-	fmt.Println(s.Id, s.PageUrl)
 
 	if s.PageUrl == "" {
 		return fmt.Errorf("pageurl is empty")

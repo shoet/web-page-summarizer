@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -16,7 +18,6 @@ import (
 	"github.com/shoet/webpagesummary/entities"
 	"github.com/shoet/webpagesummary/queue"
 	"github.com/shoet/webpagesummary/repository"
-	"golang.org/x/sync/errgroup"
 )
 
 func FailExit(err error) {
@@ -72,6 +73,8 @@ func main() {
 		FailExit(err)
 	}
 
+	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
+
 	// dequeue taskId from sqs
 	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
 	tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
@@ -79,28 +82,32 @@ func main() {
 		FailExit(err)
 	}
 
-	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
+	if len(tasks) == 0 {
+		fmt.Println("no task")
+		return
+	}
 
-	var eg errgroup.Group
-	for _, task := range tasks {
-		t := task
-		eg.Go(func() error {
-			err := tasker.ExecuteSummaryTask(ctx, t)
+	fmt.Println("Pull task:")
+	fmt.Println(strings.Join(tasks, "\n"))
+
+	var wg sync.WaitGroup
+	for _, t := range tasks {
+		wg.Add(1)
+		go func(taskId string) {
+			defer wg.Done()
+			err := tasker.ExecuteSummaryTask(ctx, taskId)
 			if err != nil {
 				// if failed task update dynamodb status failed
-				if err := summaryRepository.UpdateSummary(ctx, &entities.Summary{
-					Id:         t,
-					TaskStatus: "failed",
+				if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
+					Id:               t,
+					TaskStatus:       "failed",
+					TaskFailedReason: err.Error(),
 				}); err != nil {
-					return fmt.Errorf("failed to update summary [%s]: %w", t, err)
+					fmt.Printf("failed to update summary [%s]: %v\n", t, err)
 				}
-				return err
 			}
-			return nil
-		})
-	}
 
-	if err := eg.Wait(); err != nil {
-		FailExit(err)
+		}(t)
 	}
+	wg.Wait()
 }
