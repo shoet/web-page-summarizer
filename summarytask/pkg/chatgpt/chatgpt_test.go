@@ -26,7 +26,10 @@ func Test_ChatGPTService_ChatCompletions(t *testing.T) {
 	}
 
 	client := &http.Client{}
-	sut := NewChatGPTService(apiKey, client)
+	sut, err := NewChatGPTService(apiKey, client)
+	if err != nil {
+		t.Fatalf("failed to create chatgpt service: %v", err)
+	}
 
 	got, err := sut.ChatCompletions(input)
 	if err != nil {

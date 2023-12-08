@@ -96,8 +96,7 @@ func main() {
 		wg.Add(1)
 		go func(taskId string) {
 			defer wg.Done()
-			// err := tasker.ExecuteSummaryTask(ctx, taskId)
-			err := withExecTimeout(func() error {
+			err := withExecTimeout(ctx, func() error {
 				return tasker.ExecuteSummaryTask(ctx, taskId)
 			}, time.Second*time.Duration(cfg.ExecTimeout))
 			if err != nil {
@@ -119,21 +118,21 @@ func main() {
 	wg.Wait()
 }
 
-func withExecTimeout(fn func() error, duration time.Duration) error {
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), duration)
+func withExecTimeout(ctx context.Context, fn func() error, duration time.Duration) error {
+	ctxTimeout, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
+	errCh := make(chan error)
 	go func() {
-		fn()
-		cancel()
+		errCh <- fn()
 	}()
-	for {
-		time.Sleep(10 * time.Microsecond)
-		select {
-		case <-ctxTimeout.Done():
-			if ctxTimeout.Err() == context.Canceled {
-				return nil
-			}
-			return fmt.Errorf("task is timeout: %s", ctxTimeout.Err())
+
+	select {
+	case <-ctxTimeout.Done():
+		if ctxTimeout.Err() == context.Canceled {
+			return nil
 		}
+		return fmt.Errorf("task is timeout: %s", ctxTimeout.Err())
+	case err := <-errCh:
+		return err
 	}
 }

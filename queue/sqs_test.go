@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 	MustTeardown(&TeardownInput{QueueUrl: setupOutput.QueueUrl})
 }
 
-var queueName = "test-queue2"
+var queueName = "test-queue"
 var queueUrl = fmt.Sprintf(
 	"http://sqs.ap-northeast-1.localhost.localstack.cloud:4566/000000000000/%s", queueName)
 
