@@ -8,8 +8,8 @@ import (
 
 type Config struct {
 	QueueUrl       string `env:"QUEUE_URL,required"`
-	BrowserPath    string `env:"BROWSER_PATH,required"`
-	OpenAIApiKey   string `env:"OPENAI_API_KEY,required"`
+	BrowserPath    string `env:"BROWSER_PATH"`
+	OpenAIApiKey   string `env:"OPENAI_API_KEY"`
 	MaxTaskExecute int    `env:"MAX_TASK_EXECUTE" envDefault:"20"`
 }
 

@@ -67,7 +67,10 @@ func main() {
 	}
 
 	client := &http.Client{}
-	chatgptService := chatgpt.NewChatGPTService(cfg.OpenAIApiKey, client)
+	chatgptService, err := chatgpt.NewChatGPTService(cfg.OpenAIApiKey, client)
+	if err != nil {
+		FailExit(err)
+	}
 
 	// dequeue taskId from sqs
 	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
@@ -91,6 +94,7 @@ func main() {
 				}); err != nil {
 					return fmt.Errorf("failed to update summary [%s]: %w", t, err)
 				}
+				return err
 			}
 			return nil
 		})

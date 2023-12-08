@@ -142,7 +142,10 @@ func Test_ExecuteSummaryTask(t *testing.T) {
 		t.Fatalf("failed to get api key")
 	}
 	client := &http.Client{}
-	chatgptApi := chatgpt.NewChatGPTService(apiKey, client)
+	chatgptApi, err := chatgpt.NewChatGPTService(apiKey, client)
+	if err != nil {
+		t.Fatalf("failed to create ChatGPTService: %v", err)
+	}
 
 	sut := NewSummaryTask(pageRepository, pageCrawler, chatgptApi)
 	if err := sut.ExecuteSummaryTask(ctx, taskId); err != nil {

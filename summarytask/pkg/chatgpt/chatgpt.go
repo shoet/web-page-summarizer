@@ -16,11 +16,14 @@ type ChatGPTService struct {
 	client Client
 }
 
-func NewChatGPTService(apiKey string, client *http.Client) *ChatGPTService {
+func NewChatGPTService(apiKey string, client *http.Client) (*ChatGPTService, error) {
+	if apiKey == "" {
+		return nil, fmt.Errorf("api key is empty")
+	}
 	return &ChatGPTService{
 		apiKey: apiKey,
 		client: client,
-	}
+	}, nil
 }
 
 type ChatGPTRequest struct {
