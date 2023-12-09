@@ -41,18 +41,20 @@ func FetchTaskId(ctx context.Context, q *queue.QueueClient, maxExecute int) ([]s
 	return tasks, nil
 }
 
+var TraceIdKey interface{}
+
 func main() {
 	ctx := context.Background()
 	logger := logging.NewLogger(os.Stdout)
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("failed to load config: %v", err))
+		logger.Fatal("failed to load config", err)
 	}
 
 	awsCfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("failed to load aws config: %v", err))
+		logger.Fatal("failed to load aws config", err)
 	}
 
 	db := dynamodb.NewFromConfig(awsCfg)
@@ -62,13 +64,13 @@ func main() {
 		BrowserPath: cfg.BrowserPath,
 	})
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("failed to initialize page crawler: %v", err))
+		logger.Fatal("failed to initialize page crawler", err)
 	}
 
 	client := &http.Client{}
 	chatgptService, err := chatgpt.NewChatGPTService(cfg.OpenAIApiKey, client)
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("failed to initialize chatgpt service: %v", err))
+		logger.Fatal("failed to initialize chatgpt service", err)
 	}
 
 	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
@@ -80,7 +82,7 @@ func main() {
 		// sqs long polling
 		tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
 		if err != nil {
-			logger.Error(fmt.Sprintf("failed to fetch task: %v", err))
+			logger.Error("failed to fetch task", err)
 			continue
 		}
 
@@ -95,8 +97,11 @@ func main() {
 		var wg sync.WaitGroup
 		for _, t := range tasks {
 			wg.Add(1)
+
 			go func(taskId string) {
 				defer wg.Done()
+				traceIdLogger := logger.NewTraceIdLogger(taskId)
+				ctx := logging.SetLogger(ctx, traceIdLogger)
 				err := withExecTimeout(ctx, func() error {
 					return tasker.ExecuteSummaryTask(ctx, taskId)
 				}, time.Second*time.Duration(cfg.ExecTimeout))
@@ -107,12 +112,12 @@ func main() {
 						TaskStatus:       "failed",
 						TaskFailedReason: err.Error(),
 					}); err != nil {
-						logger.Error(fmt.Sprintf("failed to update summary [%s]: %v", taskId, err))
+						traceIdLogger.Error("failed to update summary", err)
 					}
-					logger.Error(fmt.Sprintf("task is failed [%s]: %v", taskId, err))
+					traceIdLogger.Error("task is failed", err)
 					return
 				}
-				logger.Info(fmt.Sprintf("task is complete [%s]", taskId))
+				traceIdLogger.Info("task is complete")
 				return
 			}(t)
 		}

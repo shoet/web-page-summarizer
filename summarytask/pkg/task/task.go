@@ -6,6 +6,7 @@ import (
 
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
+	"github.com/shoet/webpagesummary/logging"
 	"github.com/shoet/webpagesummary/repository"
 )
 
@@ -34,6 +35,9 @@ func NewSummaryTask(
 }
 
 func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) error {
+	logger := logging.GetLogger(ctx)
+	logger.Info("start to execute task")
+
 	// get task from dynamodb
 	s, err := st.repo.GetSummary(ctx, taskId)
 	if err != nil {
@@ -46,9 +50,12 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 
 	// dynamodb update taskId status to processing
 	s.TaskStatus = "processing"
+	logger.Info("task is processing")
 	if err := st.repo.UpdateSummary(ctx, s); err != nil {
 		return fmt.Errorf("failed to update summary: %w", err)
 	}
+
+	logger.Info("processing scrape contents")
 
 	// scrape title, content
 	title, content, err := st.crawler.FetchContents(s.PageUrl)
@@ -62,6 +69,8 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 	if err := st.repo.UpdateSummary(ctx, s); err != nil {
 		return fmt.Errorf("failed to update summary: %w", err)
 	}
+
+	logger.Info("processing text summary")
 
 	// request chatgpt api get content summary
 	summaryTemplate, err := chatgpt.SummaryTemplateBuilder(&chatgpt.SummaryTemplateInput{
