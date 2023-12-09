@@ -17,14 +17,10 @@ import (
 	"github.com/shoet/web-page-summarizer-task/pkg/task"
 	"github.com/shoet/webpagesummary/config"
 	"github.com/shoet/webpagesummary/entities"
+	"github.com/shoet/webpagesummary/logging"
 	"github.com/shoet/webpagesummary/queue"
 	"github.com/shoet/webpagesummary/repository"
 )
-
-func FailExit(err error) {
-	fmt.Printf("failed to execute: %v\n", err)
-	os.Exit(1)
-}
 
 func FailTask(traceId string, err error) {
 	fmt.Printf("failed to execute task: %v\n", err)
@@ -47,15 +43,16 @@ func FetchTaskId(ctx context.Context, q *queue.QueueClient, maxExecute int) ([]s
 
 func main() {
 	ctx := context.Background()
+	logger := logging.NewLogger(os.Stdout)
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		FailExit(err)
+		logger.Fatal(fmt.Sprintf("failed to load config: %v", err))
 	}
 
 	awsCfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		FailExit(err)
+		logger.Fatal(fmt.Sprintf("failed to load aws config: %v", err))
 	}
 
 	db := dynamodb.NewFromConfig(awsCfg)
@@ -65,13 +62,13 @@ func main() {
 		BrowserPath: cfg.BrowserPath,
 	})
 	if err != nil {
-		FailExit(err)
+		logger.Fatal(fmt.Sprintf("failed to initialize page crawler: %v", err))
 	}
 
 	client := &http.Client{}
 	chatgptService, err := chatgpt.NewChatGPTService(cfg.OpenAIApiKey, client)
 	if err != nil {
-		FailExit(err)
+		logger.Fatal(fmt.Sprintf("failed to initialize chatgpt service: %v", err))
 	}
 
 	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
@@ -83,17 +80,17 @@ func main() {
 		// sqs long polling
 		tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
 		if err != nil {
-			fmt.Printf("failed to fetch task: %v\n", err)
+			logger.Error(fmt.Sprintf("failed to fetch task: %v", err))
 			continue
 		}
 
 		if len(tasks) == 0 {
-			fmt.Println("no task")
+			logger.Info("no task")
 			continue
 		}
 
-		fmt.Println("Pull task:")
-		fmt.Println(strings.Join(tasks, "\n"))
+		logger.Info("Pull task:")
+		logger.Info(strings.Join(tasks, "\n"))
 
 		var wg sync.WaitGroup
 		for _, t := range tasks {
@@ -110,12 +107,12 @@ func main() {
 						TaskStatus:       "failed",
 						TaskFailedReason: err.Error(),
 					}); err != nil {
-						fmt.Printf("failed to update summary [%s]: %v\n", taskId, err)
+						logger.Error(fmt.Sprintf("failed to update summary [%s]: %v", taskId, err))
 					}
-					fmt.Printf("task is failed [%s]: %v\n", taskId, err)
+					logger.Error(fmt.Sprintf("task is failed [%s]: %v", taskId, err))
 					return
 				}
-				fmt.Printf("task is complete [%s]\n", taskId)
+				logger.Info(fmt.Sprintf("task is complete [%s]", taskId))
 				return
 			}(t)
 		}
