@@ -304,8 +304,8 @@ func main() {
 			&ecs.TaskDefinitionArgs{
 				Family:                  pulumi.String("web-page-summarizer"),
 				NetworkMode:             pulumi.String("awsvpc"),
-				Cpu:                     pulumi.String("1024"),
-				Memory:                  pulumi.String("3072"),
+				Cpu:                     pulumi.String("512"),
+				Memory:                  pulumi.String("1024"),
 				TaskRoleArn:             ecsTaskRole.Arn,
 				ExecutionRoleArn:        ecsTaskExecutionRole.Arn,
 				RequiresCompatibilities: pulumi.StringArray{pulumi.String("FARGATE")},
