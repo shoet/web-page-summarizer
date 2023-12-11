@@ -102,7 +102,7 @@ func main() {
 				defer wg.Done()
 				traceIdLogger := logger.NewTraceIdLogger(taskId)
 				ctx := logging.SetLogger(ctx, traceIdLogger)
-				err := withExecTimeout(ctx, func() error {
+				err := withExecTimeout(ctx, func(ctx context.Context) error {
 					return tasker.ExecuteSummaryTask(ctx, taskId)
 				}, time.Second*time.Duration(cfg.ExecTimeout))
 				if err != nil {
@@ -125,13 +125,13 @@ func main() {
 	}
 }
 
-func withExecTimeout(ctx context.Context, fn func() error, duration time.Duration) error {
+func withExecTimeout(ctx context.Context, fn func(c context.Context) error, duration time.Duration) error {
 	ctxTimeout, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
 	errCh := make(chan error)
-	go func() {
-		errCh <- fn()
-	}()
+	go func(ctx context.Context) {
+		errCh <- fn(ctx)
+	}(ctxTimeout)
 
 	select {
 	case <-ctxTimeout.Done():

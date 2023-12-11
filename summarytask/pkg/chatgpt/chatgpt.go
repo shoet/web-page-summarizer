@@ -113,5 +113,8 @@ func (c *ChatGPTService) ChatCompletions(input *ChatCompletionsInput) (string, e
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
 		return "", fmt.Errorf("failed to decode response body: %w", err)
 	}
+	if len(responseBody.Choices) == 0 {
+		return "", fmt.Errorf("failed to get response")
+	}
 	return responseBody.Choices[0].Message.Content, nil
 }

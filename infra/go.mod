@@ -1,6 +1,8 @@
 module web-page-summrizer
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/pulumi/pulumi-aws/sdk/v6 v6.4.0

@@ -29,6 +29,10 @@
       {
         "name": "MAX_TASK_EXECUTE",
         "valueFrom": "/web-page-summarizer/task/MAX_TASK_EXECUTE"
+      },
+      {
+        "name": "EXEC_TIMEOUT_SEC",
+        "valueFrom": "/web-page-summarizer/task/EXEC_TIMEOUT_SEC"
       }
     ],
     "mountPoints": [],
