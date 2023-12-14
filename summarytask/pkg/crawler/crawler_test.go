@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -51,4 +52,29 @@ func Test_FetchPage(t *testing.T) {
 	}
 
 	<-idleConnsClosed
+}
+
+func Test_ScrapBody(t *testing.T) {
+
+	sut, err := NewPageCrawler(&PageCrawlerInput{
+		BrowserPath: "/opt/homebrew/bin/chromium", // TODO local
+	})
+	if err != nil {
+		t.Fatalf("failed to create PageCrawler: %v", err)
+	}
+
+	url := "https://www.fukuishimbun.co.jp/articles/-/1929077"
+	page, err := sut.FetchPage(url)
+	if err != nil {
+		t.Fatalf("failed to fetch page: %v", err)
+	}
+
+	title, body, err := ScrapBody(page)
+	if err != nil {
+		t.Fatalf("failed to scrap body: %v", err)
+	}
+
+	fmt.Printf("title: %v\n", title)
+	fmt.Printf("body: %v\n", body)
+
 }
