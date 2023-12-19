@@ -38,11 +38,12 @@ type ChatGPTRequestMessage struct {
 }
 
 type ChatGPTResponse struct {
-	ID      string                 `json:"id"`
-	Object  string                 `json:"object"`
-	Created int64                  `json:"created"`
-	Model   string                 `json:"model"`
-	Choices []ChatGPTRequestChoice `json:"choices"`
+	ID            string                 `json:"id"`
+	Object        string                 `json:"object"`
+	Created       int64                  `json:"created"`
+	Model         string                 `json:"model"`
+	Choices       []ChatGPTRequestChoice `json:"choices"`
+	ErrorResponse ChatGPTErrorResponse   `json:"error"`
 }
 
 type ChatGPTResponseDelta struct {
@@ -64,6 +65,13 @@ type ChatGPTResponseMessage struct {
 
 type ChatCompletionsInput struct {
 	Text string `json:"text"`
+}
+
+type ChatGPTErrorResponse struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Param   string `json:"param"`
+	Code    string `json:"code"`
 }
 
 func (c *ChatGPTService) ChatCompletions(input *ChatCompletionsInput) (string, error) {
@@ -112,6 +120,9 @@ func (c *ChatGPTService) ChatCompletions(input *ChatCompletionsInput) (string, e
 	var responseBody ChatGPTResponse
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
 		return "", fmt.Errorf("failed to decode response body: %w", err)
+	}
+	if responseBody.ErrorResponse != (ChatGPTErrorResponse{}) {
+		return "", fmt.Errorf("failed to get response: %s", responseBody.ErrorResponse.Message)
 	}
 	if len(responseBody.Choices) == 0 {
 		return "", fmt.Errorf("failed to get response")
