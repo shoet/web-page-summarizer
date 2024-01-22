@@ -41,6 +41,12 @@ package:
     - "!./**"
     - ./bin/**
 
+ecr:
+  images:
+    summaryPageContainerImage:
+      path: .
+      platform: linux/amd64
+      file: ./summarytask/Dockerfile
 functions:
   health:
     handler: bin/health
@@ -71,7 +77,17 @@ functions:
     environment:
       QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
 
-# you can add CloudFormation resource templates here
+  summary-page:
+    image:
+      name: summaryPageContainerImage
+    description: summary web page
+    environment:
+      QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
+      OPENAI_API_KEY: ${ssm:/web-page-summarizer/task/OPENAI_API_KEY}
+    timeout: 300
+    memorySize: 2048
+    ephemeralStorageSize: 1024
+
 resources:
   Resources:
     summaryTable:
@@ -92,20 +108,7 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: web_page_summary_queue
-        # ContentBasedDeduplication: Boolean
-        # DeduplicationScope: String
-        # DelaySeconds: 0
-        # FifoQueue: false
-        # FifoThroughputLimit: String
-        # KmsDataKeyReusePeriodSeconds: Integer
-        # KmsMasterKeyId: String
-        # MaximumMessageSize: 262144
-        # MessageRetentionPeriod: 345600
         ReceiveMessageWaitTimeSeconds: 20
-        # RedriveAllowPolicy: Json
-        # RedrivePolicy: Json
-        # SqsManagedSseEnabled: Boolean
-        # VisibilityTimeout: 30
         Tags:
           - Key: Name
             Value: web_page_summary
@@ -123,7 +126,3 @@ resources:
         Name: /web-page-summarizer/task/API_URL
         Type: String
         Value: ${env:API_URL}
-#  Outputs:
-#     NewOutput:
-#       Description: "Description for the output"
-#       Value: "Some output value"
