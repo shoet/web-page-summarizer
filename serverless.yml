@@ -6,8 +6,7 @@ useDotenv: true
 
 provider:
   name: aws
-  runtime: go1.x
-
+  runtime: provided.al2
   stage: dev
   region: ap-northeast-1
 
@@ -36,44 +35,31 @@ provider:
           - taskQueue
           - Arn
 
+  ecr:
+    images:
+      summaryPageContainerImage:
+        path: .
+        platform: linux/amd64
+        file: ./summarytask/Dockerfile
+
 package:
-  patterns:
-    - "!./**"
+  individually: true
+  include:
+    - functions/**
+  exclude:
     - ./bin/**
 
-ecr:
-  images:
-    summaryPageContainerImage:
-      path: .
-      platform: linux/amd64
-      file: ./summarytask/Dockerfile
 functions:
-  health:
-    handler: bin/health
+  api:
+    handler: functions/api/main.go
+    package:
+      individually: true
+      artifact: ./bin/api.zip
     events:
       - http:
-          path: /health
-          method: get
-          cors: true
+          path: /{proxy+}
+          method: any
           private: true
-
-  get-summary:
-    handler: bin/get-summary
-    events:
-      - http:
-          path: /get-summary
-          method: post
-          cors: true
-          private: true
-  task:
-    handler: bin/task
-    events:
-      - http:
-          path: /task
-          method: post
-          cors: true
-          private: true
-
     environment:
       QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
 

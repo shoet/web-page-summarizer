@@ -3,10 +3,9 @@
 DOCKER_IMAGE := web-page-summarizer-task
 
 .PHONY: build
-build: ## Build Lambda functions binary
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/health functions/health/main.go
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/get-summary functions/get-summary/main.go
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/task functions/task/main.go
+build: ## build go binary to bootstrap
+	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./bin/api/bootstrap functions/api/main.go \
+	&& zip -j ./bin/api.zip ./bin/api/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary
