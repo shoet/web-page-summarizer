@@ -7,6 +7,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.25.11
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.6
 	github.com/go-rod/rod v0.114.5
+	github.com/otiai10/copy v1.14.0
+	github.com/playwright-community/playwright-go v0.4001.0
 	github.com/shoet/webpagesummary v0.0.0
 )
 
@@ -28,6 +30,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2 // indirect
 	github.com/aws/smithy-go v1.19.0 // indirect
 	github.com/caarlos0/env/v10 v10.0.0 // indirect
+	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
+	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
@@ -37,6 +42,8 @@ require (
 	github.com/ysmood/got v0.34.1 // indirect
 	github.com/ysmood/gson v0.7.3 // indirect
 	github.com/ysmood/leakless v0.8.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 )
 

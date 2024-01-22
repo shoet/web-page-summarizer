@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
-	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
 	"github.com/shoet/webpagesummary/logging"
 	"github.com/shoet/webpagesummary/repository"
 )
@@ -15,16 +14,20 @@ type Logger interface {
 	Error(args ...interface{})
 }
 
+type Crawler interface {
+	FetchContents(url string) (string, string, error)
+}
+
 type SummaryTask struct {
 	repo    *repository.SummaryRepository
-	crawler *crawler.PageCrawler
+	crawler Crawler
 	chatgpt *chatgpt.ChatGPTService
 	logger  Logger
 }
 
 func NewSummaryTask(
 	repo *repository.SummaryRepository,
-	crawler *crawler.PageCrawler,
+	crawler Crawler,
 	chatgpt *chatgpt.ChatGPTService,
 ) *SummaryTask {
 	return &SummaryTask{
