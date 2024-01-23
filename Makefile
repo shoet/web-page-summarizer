@@ -3,10 +3,9 @@
 DOCKER_IMAGE := web-page-summarizer-task
 
 .PHONY: build
-build: ## Build Lambda functions binary
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/health functions/health/main.go
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/get-summary functions/get-summary/main.go
-	env GOOS=linux go build -trimpath -ldflags="-s -w" -o bin/task functions/task/main.go
+build: ## build go binary to bootstrap
+	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./bin/api/bootstrap functions/api/main.go \
+	&& zip -j ./bin/api.zip ./bin/api/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary
@@ -15,41 +14,6 @@ clean: ## Clean Lambda functions binary
 .PHONY: deploy
 deploy: clean build ## Deploy by Serverless Framework
 	sls deploy --verbose
-
-.PHONY: build-tasker
-build-tasker: ## Build tasker binary
-	cd summarytask && \
-		env GOOS=linux go build -trimpath -ldflags="-s -w" -o cmd/bin/main cmd/main.go
-
-.PHONY: build-tasker-local
-build-tasker-local: ## Build tasker binary on Arm64
-	cd summarytask && \
-		go build -trimpath -ldflags="-s -w" -o cmd/bin/main cmd/main.go
-
-.PHONY: build-image-tasker
-build-image-tasker: ## Build tasker container image
-	docker build -t ${DOCKER_IMAGE}:latest \
-		--platform linux/amd64 \
-		--target deploy \
-		-f summarytask/Dockerfile \
-		.
-
-.PHONY: build-image-tasker-local
-build-image-tasker-local: ## Build crawler container image on Arm64
-	docker build -t ${DOCKER_IMAGE}:local \
-		--target deploy \
-		-f summarytask/Dockerfile \
-		--no-cache \
-		.
-
-.PHONY: push-container-tasker
-push-container-tasker: ## Push tasker container image
-	bash ./container_push.sh
-
-.PHONY: run-tasker
-run-tasker: ## run tasker development
-	cd summarytask && \
-		go run cmd/crawltask/main.go
 
 .PHONY: generate
 generate: ## Generate codes

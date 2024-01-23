@@ -24,3 +24,6 @@ bin/*
 
 .serverless
 .env
+
+node_modules
+.bin
