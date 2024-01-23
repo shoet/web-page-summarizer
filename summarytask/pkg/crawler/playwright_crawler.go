@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	cp "github.com/otiai10/copy"
 	"github.com/playwright-community/playwright-go"
+	scraper "github.com/shoet/web-page-summarizer-task/pkg/scrapper"
 )
 
 type PlaywrightClient struct {
@@ -20,7 +20,9 @@ type PlaywrightClientConfig struct {
 	BrowserLaunchTimeoutSec int
 }
 
-func NewPlaywrightClient(config *PlaywrightClientConfig) (*PlaywrightClient, func() error, error) {
+func NewPlaywrightClient(
+	config *PlaywrightClientConfig,
+) (*PlaywrightClient, func() error, error) {
 	browserBaseDir := "/tmp/playwright/browser"
 	runOption := &playwright.RunOptions{
 		SkipInstallBrowsers: config.SkipInstallBrowsers,
@@ -112,35 +114,13 @@ func (p *PlaywrightClient) FetchContents(url string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("could not fetch page: %v", err)
 	}
-
-	titles, err := page.Locator("h1").All()
+	scraper, err := scraper.NewPlaywrightScraper(url)
 	if err != nil {
-		return "", "", fmt.Errorf("could not get h1: %v", err)
+		return "", "", fmt.Errorf("could not create scraper: %v", err)
 	}
-	titleBuilder := strings.Builder{}
-	for _, t := range titles {
-		text, err := t.TextContent()
-		if err != nil {
-			return "", "", fmt.Errorf("could not get text content: %v", err)
-		}
-		if _, err := titleBuilder.WriteString(text); err != nil {
-			return "", "", fmt.Errorf("could not write string: %v", err)
-		}
-	}
-
-	contents, err := page.Locator("p").All()
+	title, body, err := scraper.Scrape(page)
 	if err != nil {
-		return "", "", fmt.Errorf("could not get p: %v", err)
+		return "", "", fmt.Errorf("could not close page: %v", err)
 	}
-	contentBuilder := strings.Builder{}
-	for _, c := range contents {
-		text, err := c.TextContent()
-		if err != nil {
-			return "", "", fmt.Errorf("could not get text content: %v", err)
-		}
-		if _, err := contentBuilder.WriteString(text); err != nil {
-			return "", "", fmt.Errorf("could not write string: %v", err)
-		}
-	}
-	return titleBuilder.String(), contentBuilder.String(), nil
+	return title, body, nil
 }
