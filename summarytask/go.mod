@@ -8,9 +8,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.25.11
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.6
 	github.com/go-rod/rod v0.114.5
+	github.com/joho/godotenv v1.5.1
 	github.com/otiai10/copy v1.14.0
 	github.com/playwright-community/playwright-go v0.4001.0
 	github.com/shoet/webpagesummary v0.0.0
+	golang.org/x/sync v0.3.0
 )
 
 require (
@@ -43,7 +45,6 @@ require (
 	github.com/ysmood/gson v0.7.3 // indirect
 	github.com/ysmood/leakless v0.8.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 )
 

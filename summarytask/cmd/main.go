@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/joho/godotenv"
 	cp "github.com/otiai10/copy"
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
@@ -76,7 +77,7 @@ func CopyBrowser() (string, error) {
 	return dst, nil
 }
 
-func Handler(ctx context.Context) (string, error) {
+func RunTask(ctx context.Context) (string, error) {
 	logger := logging.NewLogger(os.Stdout)
 
 	cfg, err := config.NewConfig()
@@ -123,49 +124,56 @@ func Handler(ctx context.Context) (string, error) {
 	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
 
 	// sqs long polling
-	tasks, err := FetchTaskId(ctx, queueClient, cfg.MaxTaskExecute)
+	maxTaskExecute := 1 // Lambda上でを並列で立ち上げられなかったため
+	tasks, err := FetchTaskId(ctx, queueClient, maxTaskExecute)
 	if err != nil {
-		logger.Error("failed to fetch task", err)
+		logger.Fatal("failed to fetch task", err)
 	}
 
 	if len(tasks) == 0 {
 		logger.Info("no task")
+		return "no task", nil
 	}
 
 	logger.Info("Pull task:")
 	logger.Info(strings.Join(tasks, "\n"))
-
-	var wg sync.WaitGroup
-	for _, t := range tasks {
-		wg.Add(1)
-
-		go func(taskId string) {
-			defer wg.Done()
-			traceIdLogger := logger.NewTraceIdLogger(taskId)
-			ctx := logging.SetLogger(ctx, traceIdLogger)
-			err := withExecTimeout(ctx, func(ctx context.Context) error {
-				return tasker.ExecuteSummaryTask(ctx, taskId)
-			}, time.Second*time.Duration(cfg.ExecTimeout))
-			if err != nil {
-				// タスク失敗時の処理
-				if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
-					Id:               taskId,
-					TaskStatus:       "failed",
-					TaskFailedReason: err.Error(),
-				}); err != nil {
-					traceIdLogger.Error("failed to update summary", err)
-				}
-				traceIdLogger.Error("task is failed", err)
-				return
-			}
-			traceIdLogger.Info("task is complete")
-			return
-		}(t)
+	taskId := tasks[0]
+	traceIdLogger := logger.NewTraceIdLogger(taskId)
+	ctx = logging.SetLogger(ctx, traceIdLogger)
+	if err := tasker.ExecuteSummaryTask(ctx, taskId); err != nil {
+		traceIdLogger.Error("failed to execute task", err)
+		// タスク失敗時はsummaryのstatusをfailedにする
+		if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
+			Id:               taskId,
+			TaskStatus:       "failed",
+			TaskFailedReason: err.Error(),
+		}); err != nil {
+			traceIdLogger.Error("failed to update summary", err)
+		}
+		traceIdLogger.Error("task is failed", err)
+		return "failed", fmt.Errorf("failed to execute task: %w", err)
 	}
-	wg.Wait()
-	return "ok", nil
+	traceIdLogger.Info("task is complete")
+	return "success", nil
+
+}
+
+func Handler(ctx context.Context) (string, error) {
+	return RunTask(ctx)
 }
 
 func main() {
-	lambda.Start(Handler)
+	if err := godotenv.Load(); err != nil {
+		fmt.Printf("load env: %v\n", err)
+	}
+	if os.Getenv("ENV") == "local" {
+		ctx := context.Background()
+		result, err := RunTask(ctx)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(result)
+	} else {
+		lambda.Start(Handler)
+	}
 }
