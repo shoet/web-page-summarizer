@@ -99,6 +99,7 @@ resources:
           - Key: Name
             Value: web_page_summary
 
+    # パラメータストアにKEY・URLを登録
     restApiKey:
       Type: AWS::SSM::Parameter
       Properties:

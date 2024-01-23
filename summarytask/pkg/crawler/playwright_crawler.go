@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	cp "github.com/otiai10/copy"
@@ -15,13 +16,14 @@ type PlaywrightClient struct {
 }
 
 type PlaywrightClientConfig struct {
+	SkipInstallBrowsers     bool
 	BrowserLaunchTimeoutSec int
 }
 
 func NewPlaywrightClient(config *PlaywrightClientConfig) (*PlaywrightClient, func() error, error) {
 	browserBaseDir := "/tmp/playwright/browser"
 	runOption := &playwright.RunOptions{
-		SkipInstallBrowsers: true,
+		SkipInstallBrowsers: config.SkipInstallBrowsers,
 		DriverDirectory:     browserBaseDir,
 		Browsers:            []string{"chromium"},
 		Verbose:             true,
@@ -59,6 +61,9 @@ func NewPlaywrightClient(config *PlaywrightClientConfig) (*PlaywrightClient, fun
 			"--single-process",
 			"--disable-gpu-sandbox",
 		},
+	}
+	if runtime.GOOS != "linux" {
+		chromiumOptions = playwright.BrowserTypeLaunchOptions{}
 	}
 	browser, err := pw.Chromium.Launch(chromiumOptions)
 	if err != nil {

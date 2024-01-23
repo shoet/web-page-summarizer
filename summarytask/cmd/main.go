@@ -92,12 +92,21 @@ func Handler(ctx context.Context) (string, error) {
 	db := dynamodb.NewFromConfig(awsCfg)
 	summaryRepository := repository.NewSummaryRepository(db)
 
-	if _, err := CopyBrowser(); err != nil {
-		logger.Fatal("failed to copy browser", err)
-	}
-	pageCrawler, browserCloser, err := crawler.NewPlaywrightClient(&crawler.PlaywrightClientConfig{
+	playwrightConfig := &crawler.PlaywrightClientConfig{
 		BrowserLaunchTimeoutSec: 120,
-	})
+		SkipInstallBrowsers:     false,
+	}
+	if runtime.GOOS == "linux" {
+		// Lambdaでの実行時は/varに用意したブラウザを/tmpにコピーする
+		if _, err := CopyBrowser(); err != nil {
+			logger.Fatal("failed to copy browser", err)
+		}
+		// Lambdaでの実行時はブラウザのインストールをスキップする
+		playwrightConfig.SkipInstallBrowsers = true
+	} else {
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", cfg.BrowserDownloadPath)
+	}
+	pageCrawler, browserCloser, err := crawler.NewPlaywrightClient(playwrightConfig)
 	defer browserCloser()
 	if err != nil {
 		logger.Fatal("failed to initialize page crawler", err)

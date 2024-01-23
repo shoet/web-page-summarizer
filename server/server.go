@@ -37,7 +37,3 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 
 	return server, nil
 }
-
-// bootstrapでデプロイする
-// serverless-go-plugin外す
-// デプロイする
