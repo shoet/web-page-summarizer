@@ -30,6 +30,7 @@ provider:
         - sqs:ReceiveMessage
         - sqs:DeleteMessage
         - sqs:GetQueueUrl
+        - sqs:GetQueueAttributes
       Resource:
         Fn::GetAtt:
           - taskQueue
@@ -73,6 +74,12 @@ functions:
     timeout: 300
     memorySize: 2048
     ephemeralStorageSize: 1024
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - taskQueue
+              - Arn
 
 resources:
   Resources:
@@ -95,6 +102,7 @@ resources:
       Properties:
         QueueName: web_page_summary_queue
         ReceiveMessageWaitTimeSeconds: 20
+        VisibilityTimeout: 300
         Tags:
           - Key: Name
             Value: web_page_summary

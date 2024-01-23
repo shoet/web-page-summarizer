@@ -30,10 +30,10 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server.GET("/health", hch.Handler)
 
 	gsh := NewGetSummaryHandler(dep.Validator, dep.SummaryRepository)
-	server.POST("/summary", gsh.Handler)
+	server.POST("/get-summary", gsh.Handler)
 
 	sth := NewSummaryTaskHandler(dep.Validator, dep.SummaryRepository, dep.QueueClient)
-	server.POST("/summary/task", sth.Handler)
+	server.POST("/task", sth.Handler)
 
 	return server, nil
 }

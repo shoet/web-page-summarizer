@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
-	"time"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -29,41 +29,7 @@ func FailTask(traceId string, err error) {
 	fmt.Printf("failed to execute task: %v\n", err)
 }
 
-func FetchTaskId(ctx context.Context, q *queue.QueueClient, maxExecute int) ([]string, error) {
-	var tasks []string
-	for i := 0; i < maxExecute; i++ {
-		taskId, err := q.Dequeue(ctx)
-		if err != nil {
-			if errors.Is(err, queue.ErrEmptyQueue) {
-				break
-			}
-			return nil, fmt.Errorf("failed to dequeue: %w", err)
-		}
-		tasks = append(tasks, taskId)
-	}
-	return tasks, nil
-}
-
 var TraceIdKey interface{}
-
-func withExecTimeout(ctx context.Context, fn func(c context.Context) error, duration time.Duration) error {
-	ctxTimeout, cancel := context.WithTimeout(ctx, duration)
-	defer cancel()
-	errCh := make(chan error)
-	go func(ctx context.Context) {
-		errCh <- fn(ctx)
-	}(ctxTimeout)
-
-	select {
-	case <-ctxTimeout.Done():
-		if ctxTimeout.Err() == context.Canceled {
-			return nil
-		}
-		return fmt.Errorf("task is timeout: %s", ctxTimeout.Err())
-	case err := <-errCh:
-		return err
-	}
-}
 
 func CopyBrowser() (string, error) {
 	src := "/var/playwright/browser/chromium-1091"
@@ -77,21 +43,46 @@ func CopyBrowser() (string, error) {
 	return dst, nil
 }
 
-func RunTask(ctx context.Context) (string, error) {
+type TaskExecutor struct {
+	config *config.Config
+	logger *logging.Logger
+	queue  *queue.QueueClient
+	db     *dynamodb.Client
+}
+
+func NewTaskExecutor(ctx context.Context, cfg *config.Config) (*TaskExecutor, error) {
 	logger := logging.NewLogger(os.Stdout)
-
-	cfg, err := config.NewConfig()
-	if err != nil {
-		logger.Fatal("failed to load config", err)
-	}
-
 	awsCfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		logger.Fatal("failed to load aws config", err)
+		return nil, fmt.Errorf("failed to load aws config: %w", err)
 	}
-
+	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
 	db := dynamodb.NewFromConfig(awsCfg)
-	summaryRepository := repository.NewSummaryRepository(db)
+	return &TaskExecutor{
+		config: cfg,
+		logger: logger,
+		queue:  queueClient,
+		db:     db,
+	}, nil
+}
+
+func (t *TaskExecutor) FetchTaskId(ctx context.Context, maxExecute int) ([]string, error) {
+	var tasks []string
+	for i := 0; i < maxExecute; i++ {
+		taskId, err := t.queue.Dequeue(ctx)
+		if err != nil {
+			if errors.Is(err, queue.ErrEmptyQueue) {
+				break
+			}
+			return nil, fmt.Errorf("failed to dequeue: %w", err)
+		}
+		tasks = append(tasks, taskId)
+	}
+	return tasks, nil
+}
+
+func (t *TaskExecutor) RunTask(ctx context.Context, taskId string) (string, error) {
+	summaryRepository := repository.NewSummaryRepository(t.db)
 
 	playwrightConfig := &crawler.PlaywrightClientConfig{
 		BrowserLaunchTimeoutSec: 120,
@@ -100,45 +91,28 @@ func RunTask(ctx context.Context) (string, error) {
 	if runtime.GOOS == "linux" {
 		// Lambdaでの実行時は/varに用意したブラウザを/tmpにコピーする
 		if _, err := CopyBrowser(); err != nil {
-			logger.Fatal("failed to copy browser", err)
+			t.logger.Fatal("failed to copy browser", err)
 		}
 		// Lambdaでの実行時はブラウザのインストールをスキップする
 		playwrightConfig.SkipInstallBrowsers = true
 	} else {
-		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", cfg.BrowserDownloadPath)
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", t.config.BrowserDownloadPath)
 	}
 	pageCrawler, browserCloser, err := crawler.NewPlaywrightClient(playwrightConfig)
 	defer browserCloser()
 	if err != nil {
-		logger.Fatal("failed to initialize page crawler", err)
+		t.logger.Fatal("failed to initialize page crawler", err)
 	}
 
 	client := &http.Client{}
-	chatgptService, err := chatgpt.NewChatGPTService(cfg.OpenAIApiKey, client)
+	chatgptService, err := chatgpt.NewChatGPTService(t.config.OpenAIApiKey, client)
 	if err != nil {
-		logger.Fatal("failed to initialize chatgpt service", err)
+		t.logger.Fatal("failed to initialize chatgpt service", err)
 	}
 
 	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
 
-	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
-
-	// sqs long polling
-	maxTaskExecute := 1 // Lambda上でを並列で立ち上げられなかったため
-	tasks, err := FetchTaskId(ctx, queueClient, maxTaskExecute)
-	if err != nil {
-		logger.Fatal("failed to fetch task", err)
-	}
-
-	if len(tasks) == 0 {
-		logger.Info("no task")
-		return "no task", nil
-	}
-
-	logger.Info("Pull task:")
-	logger.Info(strings.Join(tasks, "\n"))
-	taskId := tasks[0]
-	traceIdLogger := logger.NewTraceIdLogger(taskId)
+	traceIdLogger := t.logger.NewTraceIdLogger(taskId)
 	ctx = logging.SetLogger(ctx, traceIdLogger)
 	if err := tasker.ExecuteSummaryTask(ctx, taskId); err != nil {
 		traceIdLogger.Error("failed to execute task", err)
@@ -158,17 +132,42 @@ func RunTask(ctx context.Context) (string, error) {
 
 }
 
-func Handler(ctx context.Context) (string, error) {
-	return RunTask(ctx)
-}
+var executor *TaskExecutor
 
-func main() {
+func init() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Printf("load env: %v\n", err)
 	}
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	executor, err = NewTaskExecutor(context.Background(), cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize task executor: %v", err)
+	}
+}
+
+func Handler(ctx context.Context, sqsEvent events.SQSEvent) (string, error) {
+	fmt.Println("start handler")
+	taskId := sqsEvent.Records[0].Body
+	return executor.RunTask(ctx, taskId)
+}
+
+func main() {
+	ctx := context.Background()
 	if os.Getenv("ENV") == "local" {
-		ctx := context.Background()
-		result, err := RunTask(ctx)
+		tasks, err := executor.FetchTaskId(ctx, 1)
+		if err != nil {
+			log.Fatalf("failed to fetch task: %v", err)
+		}
+
+		if len(tasks) == 0 {
+			fmt.Println("no task")
+			return
+		}
+
+		result, err := executor.RunTask(ctx, tasks[0])
 		if err != nil {
 			fmt.Println(err)
 		}
