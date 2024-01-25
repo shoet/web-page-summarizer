@@ -22,7 +22,7 @@ type PlaywrightClientConfig struct {
 
 func NewPlaywrightClient(
 	config *PlaywrightClientConfig,
-) (*PlaywrightClient, func() error, error) {
+) (client *PlaywrightClient, closerFunc func() error, err error) {
 	browserBaseDir := "/tmp/playwright/browser"
 	runOption := &playwright.RunOptions{
 		SkipInstallBrowsers: config.SkipInstallBrowsers,
@@ -102,7 +102,10 @@ func (p *PlaywrightClient) FetchPage(url string) (playwright.Page, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create page: %v", err)
 	}
-	_, err = page.Goto(url)
+	pageGotoOptions := playwright.PageGotoOptions{
+		Timeout: playwright.Float(60000),
+	}
+	_, err = page.Goto(url, pageGotoOptions)
 	if err != nil {
 		return nil, fmt.Errorf("could not goto page: %v", err)
 	}

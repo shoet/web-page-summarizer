@@ -59,19 +59,11 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 		return fmt.Errorf("failed to update summary: %w", err)
 	}
 
-	if err := checkContextTimeout(ctx); err != nil {
-		return fmt.Errorf("context timeout: %w", err)
-	}
-
 	// scrape title, content
 	logger.Info("processing scrape contents")
 	title, content, err := st.crawler.FetchContents(s.PageUrl)
 	if err != nil {
 		return fmt.Errorf("failed to scrape body: %w", err)
-	}
-
-	if err := checkContextTimeout(ctx); err != nil {
-		return fmt.Errorf("context timeout: %w", err)
 	}
 
 	// dynamodb update title, content
@@ -80,10 +72,6 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 	s.Content = content
 	if err := st.repo.UpdateSummary(ctx, s); err != nil {
 		return fmt.Errorf("failed to update summary: %w", err)
-	}
-
-	if err := checkContextTimeout(ctx); err != nil {
-		return fmt.Errorf("context timeout: %w", err)
 	}
 
 	// request chatgpt api get content summary
@@ -103,23 +91,10 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 	s.Summary = summary
 	s.TaskStatus = "complete"
 
-	if err := checkContextTimeout(ctx); err != nil {
-		return fmt.Errorf("context timeout: %w", err)
-	}
-
 	// dynamodb update summary, status complete
 	logger.Info("update summary, status complete")
 	if err := st.repo.UpdateSummary(ctx, s); err != nil {
 		return fmt.Errorf("failed to update summary: %w", err)
 	}
 	return nil
-}
-
-func checkContextTimeout(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		return nil
-	}
 }
