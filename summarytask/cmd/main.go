@@ -44,10 +44,10 @@ func CopyBrowser() (string, error) {
 }
 
 type TaskExecutor struct {
-	config *config.Config
-	logger *logging.Logger
-	queue  *queue.QueueClient
-	db     *dynamodb.Client
+	config            *config.Config
+	logger            *logging.Logger
+	queue             *queue.QueueClient
+	summaryRepository *repository.SummaryRepository
 }
 
 func NewTaskExecutor(ctx context.Context, cfg *config.Config) (*TaskExecutor, error) {
@@ -58,11 +58,12 @@ func NewTaskExecutor(ctx context.Context, cfg *config.Config) (*TaskExecutor, er
 	}
 	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
 	db := dynamodb.NewFromConfig(awsCfg)
+	summaryRepository := repository.NewSummaryRepository(db)
 	return &TaskExecutor{
-		config: cfg,
-		logger: logger,
-		queue:  queueClient,
-		db:     db,
+		config:            cfg,
+		logger:            logger,
+		queue:             queueClient,
+		summaryRepository: summaryRepository,
 	}, nil
 }
 
@@ -81,9 +82,12 @@ func (t *TaskExecutor) FetchTaskId(ctx context.Context, maxExecute int) ([]strin
 	return tasks, nil
 }
 
-func (t *TaskExecutor) RunTask(ctx context.Context, taskId string) (string, error) {
-	summaryRepository := repository.NewSummaryRepository(t.db)
+type RunTaskInput struct {
+	TaskId           string
+	SQSReceiptHandle string
+}
 
+func (t *TaskExecutor) RunTask(ctx context.Context, input *RunTaskInput) error {
 	playwrightConfig := &crawler.PlaywrightClientConfig{
 		BrowserLaunchTimeoutSec: 120,
 		SkipInstallBrowsers:     false,
@@ -101,7 +105,7 @@ func (t *TaskExecutor) RunTask(ctx context.Context, taskId string) (string, erro
 	pageCrawler, browserCloser, err := crawler.NewPlaywrightClient(playwrightConfig)
 	defer browserCloser()
 	if err != nil {
-		t.logger.Fatal("failed to initialize page crawler", err)
+		return fmt.Errorf("failed to initialize playwright client: %w", err)
 	}
 
 	client := &http.Client{}
@@ -110,25 +114,32 @@ func (t *TaskExecutor) RunTask(ctx context.Context, taskId string) (string, erro
 		t.logger.Fatal("failed to initialize chatgpt service", err)
 	}
 
-	tasker := task.NewSummaryTask(summaryRepository, pageCrawler, chatgptService)
+	tasker := task.NewSummaryTask(t.summaryRepository, pageCrawler, chatgptService)
 
-	traceIdLogger := t.logger.NewTraceIdLogger(taskId)
+	traceIdLogger := t.logger.NewTraceIdLogger(input.TaskId)
 	ctx = logging.SetLogger(ctx, traceIdLogger)
-	if err := tasker.ExecuteSummaryTask(ctx, taskId); err != nil {
+	if err := tasker.ExecuteSummaryTask(ctx, input.TaskId); err != nil {
 		traceIdLogger.Error("failed to execute task", err)
+		// タスク失敗時はqueueから削除する
+		input := &RunTaskInput{
+			TaskId:           input.TaskId,
+			SQSReceiptHandle: input.SQSReceiptHandle,
+		}
+		if err := t.queue.DeleteMessage(ctx, input.SQSReceiptHandle); err != nil {
+			traceIdLogger.Error("failed to delete queue", err)
+		}
 		// タスク失敗時はsummaryのstatusをfailedにする
-		if err := summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
-			Id:               taskId,
+		if err := t.summaryRepository.UpdateSummary(context.Background(), &entities.Summary{
+			Id:               input.TaskId,
 			TaskStatus:       "failed",
 			TaskFailedReason: err.Error(),
 		}); err != nil {
 			traceIdLogger.Error("failed to update summary", err)
 		}
-		traceIdLogger.Error("task is failed", err)
-		return "failed", fmt.Errorf("failed to execute task: %w", err)
+		return fmt.Errorf("failed to execute task: %w", err)
 	}
 	traceIdLogger.Info("task is complete")
-	return "success", nil
+	return nil
 
 }
 
@@ -148,10 +159,18 @@ func init() {
 	}
 }
 
-func Handler(ctx context.Context, sqsEvent events.SQSEvent) (string, error) {
+func Handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	fmt.Println("start handler")
 	taskId := sqsEvent.Records[0].Body
-	return executor.RunTask(ctx, taskId)
+	sqsReceiptHandle := sqsEvent.Records[0].ReceiptHandle
+	input := &RunTaskInput{
+		TaskId:           taskId,
+		SQSReceiptHandle: sqsReceiptHandle,
+	}
+	if err := executor.RunTask(ctx, input); err != nil {
+		return fmt.Errorf("failed to execute task: %w", err)
+	}
+	return nil
 }
 
 func main() {
@@ -167,11 +186,13 @@ func main() {
 			return
 		}
 
-		result, err := executor.RunTask(ctx, tasks[0])
-		if err != nil {
-			fmt.Println(err)
+		input := &RunTaskInput{
+			TaskId:           tasks[0],
+			SQSReceiptHandle: "", // TODO
 		}
-		fmt.Println(result)
+		if err := executor.RunTask(ctx, input); err != nil {
+			log.Fatalf("failed to run task: %v", err)
+		}
 	} else {
 		lambda.Start(Handler)
 	}

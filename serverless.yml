@@ -80,6 +80,7 @@ functions:
             Fn::GetAtt:
               - taskQueue
               - Arn
+          batchSize: 1
 
 resources:
   Resources:
@@ -102,7 +103,7 @@ resources:
       Properties:
         QueueName: web_page_summary_queue
         ReceiveMessageWaitTimeSeconds: 20
-        VisibilityTimeout: 300
+        VisibilityTimeout: 1800
         Tags:
           - Key: Name
             Value: web_page_summary

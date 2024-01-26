@@ -103,7 +103,7 @@ func (p *PlaywrightClient) FetchPage(url string) (playwright.Page, error) {
 		return nil, fmt.Errorf("could not create page: %v", err)
 	}
 	pageGotoOptions := playwright.PageGotoOptions{
-		Timeout: playwright.Float(60000),
+		Timeout: playwright.Float(120000), // ページ表示までのタイムアウト: 2分
 	}
 	_, err = page.Goto(url, pageGotoOptions)
 	if err != nil {

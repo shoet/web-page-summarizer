@@ -43,11 +43,21 @@ func (q *QueueClient) Dequeue(ctx context.Context) (string, error) {
 		return "", ErrEmptyQueue
 	}
 	msg := output.Messages[0]
-	if _, err = q.client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-		QueueUrl:      aws.String(q.queueUrl),
-		ReceiptHandle: msg.ReceiptHandle,
-	}); err != nil {
+	if err := q.DeleteMessage(ctx, *msg.ReceiptHandle); err != nil {
 		return "", fmt.Errorf("failed DeleteMessage: %w", err)
 	}
 	return *msg.Body, nil
+}
+
+func (q *QueueClient) DeleteMessage(ctx context.Context, receiptHandle string) error {
+	fmt.Printf("receiptHandle: %v\n", receiptHandle)
+	input := &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(q.queueUrl),
+		ReceiptHandle: aws.String(receiptHandle),
+	}
+	_, err := q.client.DeleteMessage(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed DeleteQueue: %w", err)
+	}
+	return nil
 }
