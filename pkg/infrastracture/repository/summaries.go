@@ -24,6 +24,10 @@ func (r *SummaryRepository) TableName() string {
 	return "web_page_summary"
 }
 
+func (r *SummaryRepository) StatusIndexName() string {
+	return "StatusIndex"
+}
+
 func (r *SummaryRepository) GetSummary(
 	ctx context.Context, id string) (*entities.Summary, error) {
 
@@ -44,6 +48,76 @@ func (r *SummaryRepository) GetSummary(
 	}
 
 	return &s, nil
+}
+
+type InputType string
+
+const (
+	InputTypeQuery InputType = "Query"
+	InputTypeScan  InputType = "Scan"
+)
+
+type QueryScanInput struct {
+	TableName                 *string
+	ProjectionExpression      *string
+	Limit                     *int32
+	ExclusiveStartKey         map[string]types.AttributeValue
+	KeyConditionExpression    *string
+	ExpressionAttributeNames  map[string]string
+	ExpressionAttributeValues map[string]types.AttributeValue
+}
+
+func (q *QueryScanInput) Validate(inputType InputType) error {
+	if q.TableName == nil {
+		return fmt.Errorf("TableName is required")
+	}
+	if q.ProjectionExpression == nil {
+		return fmt.Errorf("AttributesToGet is required")
+	}
+	if inputType == InputTypeQuery && q.KeyConditionExpression == nil {
+		return fmt.Errorf("KeyConditionExpression is required")
+	}
+	return nil
+}
+
+func (r *SummaryRepository) ListTask(
+	ctx context.Context, status *string, nextToken *string,
+) ([]*entities.Summary, *string, error) {
+	defaultLimit := 10
+	nextTokenKey := "id"
+	statusV := "failed"
+
+	var err error
+	input := &dynamodb.QueryInput{
+		TableName:              aws.String(r.TableName()),
+		IndexName:              aws.String(r.StatusIndexName()),
+		KeyConditionExpression: aws.String("task_status = :task_status"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":task_status": &types.AttributeValueMemberS{Value: statusV},
+		},
+		Limit: aws.Int32(int32(defaultLimit)),
+	}
+	output, err := r.db.Query(ctx, input)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed Scan: %w", err)
+	}
+
+	var summaries []*entities.Summary
+	for _, item := range output.Items {
+		var s entities.Summary
+		if err := attributevalue.UnmarshalMap(item, &s); err != nil {
+			return nil, nil, fmt.Errorf("failed UnmarshalMap: %w", err)
+		}
+		summaries = append(summaries, &s)
+	}
+	var responseNextToken string
+	if len(output.LastEvaluatedKey) > 0 {
+		responseNextToken = output.LastEvaluatedKey[nextTokenKey].(*types.AttributeValueMemberS).Value
+	}
+	if summaries == nil {
+		summaries = make([]*entities.Summary, 0, 0)
+	}
+	return summaries, &responseNextToken, nil
 }
 
 func (r *SummaryRepository) CreateSummary(ctx context.Context, summary *entities.Summary) (string, error) {

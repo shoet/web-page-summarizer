@@ -47,9 +47,6 @@ func BuildEchoServer() (*echo.Echo, error) {
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "local" {
-		if err := LoadLocalEnv(); err != nil {
-			ExitOnErr(err)
-		}
 		srv, err := BuildEchoServer()
 		if err != nil {
 			ExitOnErr(err)

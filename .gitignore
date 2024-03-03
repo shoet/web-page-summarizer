@@ -28,3 +28,4 @@ bin/*
 node_modules
 .bin
 .env*
+tmp

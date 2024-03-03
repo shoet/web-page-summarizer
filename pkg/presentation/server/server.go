@@ -8,6 +8,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/handler"
 	"github.com/shoet/webpagesummary/pkg/usecase/get_summary"
+	"github.com/shoet/webpagesummary/pkg/usecase/list_task"
 	"github.com/shoet/webpagesummary/pkg/usecase/request_task"
 )
 
@@ -15,6 +16,7 @@ type ServerDependencies struct {
 	Validator             *validator.Validate
 	GetSummaryUsecase     *get_summary.Usecase
 	RequestSummaryUsecase *request_task.Usecase
+	ListTaskUsecase       *list_task.Usecase
 }
 
 func NewServerDependencies(
@@ -25,13 +27,15 @@ func NewServerDependencies(
 
 	repository := repository.NewSummaryRepository(ddbClient)
 
-	GetSummaryUsecase := get_summary.NewUsecase(repository)
+	getSummaryUsecase := get_summary.NewUsecase(repository)
 	requestTaskUsecase := request_task.NewUsecase(repository, queueClient)
+	listTaskUsecase := list_task.NewUsecase(repository)
 
 	return &ServerDependencies{
 		Validator:             validator,
-		GetSummaryUsecase:     GetSummaryUsecase,
+		GetSummaryUsecase:     getSummaryUsecase,
 		RequestSummaryUsecase: requestTaskUsecase,
+		ListTaskUsecase:       listTaskUsecase,
 	}, nil
 }
 
@@ -46,6 +50,9 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 
 	sth := handler.NewSummaryTaskHandler(dep.Validator, dep.RequestSummaryUsecase)
 	server.POST("/task", sth.Handler)
+
+	lth := handler.NewListTaskHandler(dep.ListTaskUsecase)
+	server.GET("/task", lth.Handler)
 
 	// 一覧取得
 	// パラメータstatus

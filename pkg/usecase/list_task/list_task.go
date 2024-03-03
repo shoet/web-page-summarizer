@@ -2,11 +2,14 @@ package list_task
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
 
-type SummaryRepository interface{}
+type SummaryRepository interface {
+	ListTask(ctx context.Context, status *string, nextToken *string) ([]*entities.Summary, *string, error)
+}
 
 type Usecase struct {
 	SummaryRepository SummaryRepository
@@ -17,11 +20,13 @@ func NewUsecase(summaryRepository SummaryRepository) *Usecase {
 }
 
 type UsecaseInput struct {
-	Status     *string
-	PageOffset *int
-	PageLimit  *int
+	Status *string
 }
 
-func (u *Usecase) Run(ctx context.Context, input UsecaseInput) ([]*entities.Summary, error) {
-	return nil, nil
+func (u *Usecase) Run(ctx context.Context, input UsecaseInput) ([]*entities.Summary, *string, error) {
+	tasks, nextToken, err := u.SummaryRepository.ListTask(ctx, input.Status, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed ListTask: %w", err)
+	}
+	return tasks, nextToken, nil
 }

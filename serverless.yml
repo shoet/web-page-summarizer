@@ -91,7 +91,7 @@ resources:
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
-          - AttributeName: status
+          - AttributeName: task_status
             AttributeType: S
         KeySchema:
           - AttributeName: id
@@ -99,7 +99,7 @@ resources:
         GlobalSecondaryIndexes:
           - IndexName: StatusIndex
             KeySchema:
-              - AttributeName: status
+              - AttributeName: task_status
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
