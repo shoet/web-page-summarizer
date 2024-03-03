@@ -8,4 +8,5 @@ type Summary struct {
 	Content          string `json:"content,omitempty" dynamodbav:"content,omitempty"`
 	Summary          string `json:"summary" dynamodbav:"summary,omitempty"`
 	TaskFailedReason string `json:"taskFailedReason,omitempty" dynamodbav:"task_failed_reason,omitempty"`
+	CreatedAt        int64  `json:"createdAt" dynamodbav:"created_at,omitempty"`
 }

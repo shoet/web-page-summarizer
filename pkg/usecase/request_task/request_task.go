@@ -2,6 +2,7 @@ package request_task
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
@@ -33,6 +34,7 @@ func (u *Usecase) Run(ctx context.Context, url string) (taskID string, error err
 		Id:         id,
 		PageUrl:    url,
 		TaskStatus: "request",
+		CreatedAt:  time.Now().Unix(),
 	}
 	_, err := u.SummaryRepository.CreateSummary(ctx, newSummaryTask)
 	if err != nil {

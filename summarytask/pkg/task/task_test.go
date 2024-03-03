@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -109,6 +110,7 @@ func Prepare_ExecuteSummaryTask(t *testing.T, ctx context.Context, cfg aws.Confi
 		Id:         taskId,
 		PageUrl:    "https://news.yahoo.co.jp/pickup/6484213",
 		TaskStatus: "request",
+		CreatedAt:  time.Now().Unix(),
 	})
 	if err != nil {
 		t.Fatalf("failed to create summary: %v", err)

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/go-cmp/cmp"
-	"github.com/shoet/webpagesummary/pkg/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
@@ -116,16 +117,17 @@ func Test_SummaryRepository_CreateSummary(t *testing.T) {
 	db := dynamodb.NewFromConfig(*testAwsCfg)
 	sut := NewSummaryRepository(db)
 
-	wantSummary := &entities.Summary{
-		Id:      "test_Test_SummaryRepository_CreateSummary",
-		PageUrl: "test_url",
+	argsSummary := &entities.Summary{
+		Id:        "test_Test_SummaryRepository_CreateSummary",
+		PageUrl:   "test_url",
+		CreatedAt: time.Now().Unix(),
 	}
-	id, err := sut.CreateSummary(ctx, wantSummary)
+	id, err := sut.CreateSummary(ctx, argsSummary)
 	if err != nil {
 		t.Fatalf("failed create summary: %s\n", err.Error())
 	}
 
-	if id != wantSummary.Id {
+	if id != argsSummary.Id {
 		t.Fatalf("failed create summary: id is not match")
 	}
 
@@ -144,7 +146,7 @@ func Test_SummaryRepository_CreateSummary(t *testing.T) {
 		t.Fatalf("failed UnmarshalMap: %s\n", err.Error())
 	}
 
-	if diff := cmp.Diff(wantSummary, &s); diff != "" {
+	if diff := cmp.Diff(argsSummary, &s); diff != "" {
 		t.Fatalf("failed create summary: %s\n", diff)
 	}
 }
@@ -164,7 +166,8 @@ func Test_SummaryRepository_UpdateSummary(t *testing.T) {
 	argsSummary := &entities.Summary{
 		Id:         id,
 		PageUrl:    "test_url",
-		TaskStatus: "processing",
+		TaskStatus: "request",
+		CreatedAt:  time.Now().Unix(),
 	}
 
 	av, err := attributevalue.MarshalMap(argsSummary)
@@ -200,7 +203,7 @@ func Test_SummaryRepository_UpdateSummary(t *testing.T) {
 		t.Fatalf("failed UnmarshalMap: %s\n", err.Error())
 	}
 
-	if s.TaskStatus != wantStatus {
-		t.Fatalf("failed update summary: status is not match")
+	if diff := cmp.Diff(&s, argsSummary); diff != "" {
+		t.Fatalf("failed update summary: %s\n", diff)
 	}
 }
