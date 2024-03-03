@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
-	"github.com/shoet/webpagesummary/pkg/entities"
-	"github.com/shoet/webpagesummary/pkg/queue"
-	"github.com/shoet/webpagesummary/pkg/repository"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 

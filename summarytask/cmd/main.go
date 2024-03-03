@@ -19,10 +19,10 @@ import (
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
 	"github.com/shoet/web-page-summarizer-task/pkg/task"
 	"github.com/shoet/webpagesummary/pkg/config"
-	"github.com/shoet/webpagesummary/pkg/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/logging"
-	"github.com/shoet/webpagesummary/pkg/queue"
-	"github.com/shoet/webpagesummary/pkg/repository"
 )
 
 func FailTask(traceId string, err error) {

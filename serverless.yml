@@ -48,14 +48,14 @@ package:
   include:
     - functions/**
   exclude:
-    - ./bin/**
+    - ./.bin/**
 
 functions:
   api:
     handler: functions/api/main.go
     package:
       individually: true
-      artifact: ./bin/api.zip
+      artifact: ./.bin/api.zip
     events:
       - http:
           path: /{proxy+}

@@ -12,9 +12,8 @@ import (
 	echoadapter "github.com/awslabs/aws-lambda-go-api-proxy/echo"
 	"github.com/go-playground/validator/v10"
 	"github.com/shoet/webpagesummary/pkg/config"
-	"github.com/shoet/webpagesummary/pkg/queue"
-	"github.com/shoet/webpagesummary/pkg/repository"
-	"github.com/shoet/webpagesummary/pkg/server"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/presentation/server"
 )
 
 var echoLambdaHTTP *echoadapter.EchoLambda
@@ -38,13 +37,9 @@ func init() {
 		ExitOnErr(fmt.Errorf("failed load config: %s", err.Error()))
 	}
 
-	db := dynamodb.NewFromConfig(awsCfg)
-
-	repository := repository.NewSummaryRepository(db)
-
+	ddb := dynamodb.NewFromConfig(awsCfg)
 	queueClient := queue.NewQueueClient(awsCfg, config.QueueUrl)
-
-	deps, err := server.NewServerDependencies(validator, repository, queueClient)
+	deps, err := server.NewServerDependencies(validator, queueClient, ddb)
 
 	srv, err := server.NewServer(deps)
 	if err != nil {
