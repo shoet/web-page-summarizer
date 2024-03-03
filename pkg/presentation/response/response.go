@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/shoet/webpagesummary/pkg/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
 
 type HeaderOption map[string]string

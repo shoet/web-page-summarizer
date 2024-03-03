@@ -2,6 +2,10 @@
 
 DOCKER_IMAGE := web-page-summarizer-task
 
+.PHONY: run
+run: ## Run local server
+	go run functions/api/main.go local
+
 .PHONY: build
 build: ## build go binary to bootstrap
 	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/api/bootstrap functions/api/main.go \
