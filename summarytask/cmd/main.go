@@ -18,11 +18,11 @@ import (
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
 	"github.com/shoet/web-page-summarizer-task/pkg/task"
-	"github.com/shoet/webpagesummary/config"
-	"github.com/shoet/webpagesummary/entities"
-	"github.com/shoet/webpagesummary/logging"
-	"github.com/shoet/webpagesummary/queue"
-	"github.com/shoet/webpagesummary/repository"
+	"github.com/shoet/webpagesummary/pkg/config"
+	"github.com/shoet/webpagesummary/pkg/entities"
+	"github.com/shoet/webpagesummary/pkg/logging"
+	"github.com/shoet/webpagesummary/pkg/queue"
+	"github.com/shoet/webpagesummary/pkg/repository"
 )
 
 func FailTask(traceId string, err error) {

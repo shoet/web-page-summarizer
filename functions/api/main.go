@@ -11,10 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	echoadapter "github.com/awslabs/aws-lambda-go-api-proxy/echo"
 	"github.com/go-playground/validator/v10"
-	"github.com/shoet/webpagesummary/config"
-	"github.com/shoet/webpagesummary/queue"
-	"github.com/shoet/webpagesummary/repository"
-	"github.com/shoet/webpagesummary/server"
+	"github.com/shoet/webpagesummary/pkg/config"
+	"github.com/shoet/webpagesummary/pkg/queue"
+	"github.com/shoet/webpagesummary/pkg/repository"
+	"github.com/shoet/webpagesummary/pkg/server"
 )
 
 var echoLambdaHTTP *echoadapter.EchoLambda

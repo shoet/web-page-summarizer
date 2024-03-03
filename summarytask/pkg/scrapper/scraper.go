@@ -12,10 +12,10 @@ type PlaywrightScraper interface {
 
 func NewPlaywrightScraper(url string) (PlaywrightScraper, error) {
 	switch {
-	case strings.Contains(url, "https://yahoo.com"):
-		return &NoteScraper{}, nil
-	case strings.Contains(url, "https://note.com"):
-		return &NoteScraper{}, nil
+	case strings.HasPrefix(url, "https://yahoo.com"):
+		return &NormalScraper{}, nil // TODO
+	case strings.HasPrefix(url, "https://note.com"):
+		return &NormalScraper{}, nil // TODO
 	default:
 		return &NormalScraper{}, nil
 	}

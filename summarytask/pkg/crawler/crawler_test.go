@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shoet/webpagesummary/testutil"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func Test_FetchPage(t *testing.T) {

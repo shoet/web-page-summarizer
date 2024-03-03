@@ -30,7 +30,7 @@ WORKDIR /app
 
 RUN mkdir -p /var/playwright/browser
 ENV PLAYWRIGHT_BROWSERS_PATH=/var/playwright/browser
-RUN go run github.com/playwright-community/playwright-go/cmd/playwright@latest install --with-deps
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.4001.0 install --with-deps
 
 COPY --from=builder /app/summarytask/bin/main ./main
 

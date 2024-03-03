@@ -4,12 +4,12 @@ DOCKER_IMAGE := web-page-summarizer-task
 
 .PHONY: build
 build: ## build go binary to bootstrap
-	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./bin/api/bootstrap functions/api/main.go \
-	&& zip -j ./bin/api.zip ./bin/api/bootstrap
+	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/api/bootstrap functions/api/main.go \
+	&& zip -j ./.bin/api.zip ./.bin/api/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary
-	rm -rf ./bin
+	rm -rf ./.bin
 
 .PHONY: deploy
 deploy: clean build ## Deploy by Serverless Framework

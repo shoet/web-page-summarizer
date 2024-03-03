@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/shoet/webpagesummary/entities"
+	"github.com/shoet/webpagesummary/pkg/entities"
 )
 
 type SummaryRepository interface {

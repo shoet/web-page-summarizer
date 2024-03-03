@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
-	"github.com/shoet/webpagesummary/logging"
-	"github.com/shoet/webpagesummary/repository"
+	"github.com/shoet/webpagesummary/pkg/logging"
+	"github.com/shoet/webpagesummary/pkg/repository"
 )
 
 type Logger interface {

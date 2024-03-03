@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/go-cmp/cmp"
-	"github.com/shoet/webpagesummary/entities"
-	"github.com/shoet/webpagesummary/testutil"
+	"github.com/shoet/webpagesummary/pkg/entities"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func TestMain(m *testing.M) {
