@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -48,7 +47,6 @@ func (l *ListTaskHandler) Handler(ctx echo.Context) error {
 		ctx.Logger().Errorf("failed to Bind: %v", err)
 		return response.RespondBadRequest(ctx, nil)
 	}
-	fmt.Printf("request: %+v\n", request.NextToken)
 
 	input := list_task.UsecaseInput{
 		Status:    request.Status,

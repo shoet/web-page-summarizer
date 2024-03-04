@@ -80,6 +80,35 @@ func (q *QueryScanInput) Validate(inputType InputType) error {
 	return nil
 }
 
+type QueryScanOutput interface {
+	GetItems() []map[string]types.AttributeValue
+	GetExclusiveStartKey() map[string]types.AttributeValue
+}
+
+type QueryOutputWrapper struct {
+	output *dynamodb.QueryOutput
+}
+
+func (w *QueryOutputWrapper) GetItems() []map[string]types.AttributeValue {
+	return w.output.Items
+}
+
+func (w *QueryOutputWrapper) GetExclusiveStartKey() map[string]types.AttributeValue {
+	return w.output.LastEvaluatedKey
+}
+
+type ScanOutputWrapper struct {
+	output *dynamodb.ScanOutput
+}
+
+func (w *ScanOutputWrapper) GetItems() []map[string]types.AttributeValue {
+	return w.output.Items
+}
+
+func (w *ScanOutputWrapper) GetExclusiveStartKey() map[string]types.AttributeValue {
+	return w.output.LastEvaluatedKey
+}
+
 func (r *SummaryRepository) ListTask(
 	ctx context.Context, status *string, nextToken *string, limit int32,
 ) ([]*entities.Summary, *string, error) {
@@ -106,13 +135,17 @@ func (r *SummaryRepository) ListTask(
 			input.ExclusiveStartKey["task_status"] = &types.AttributeValueMemberS{Value: *status}
 		}
 	}
-	output, err := r.db.Query(ctx, input)
+	var output QueryScanOutput
+	o, err := r.db.Query(ctx, input)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed Scan: %w", err)
 	}
+	output = &QueryOutputWrapper{
+		output: o,
+	}
 
 	var summaries []*entities.Summary
-	for _, item := range output.Items {
+	for _, item := range output.GetItems() {
 		var s entities.Summary
 		if err := attributevalue.UnmarshalMap(item, &s); err != nil {
 			return nil, nil, fmt.Errorf("failed UnmarshalMap: %w", err)
@@ -120,9 +153,8 @@ func (r *SummaryRepository) ListTask(
 		summaries = append(summaries, &s)
 	}
 	var responseNextToken string
-	if len(output.LastEvaluatedKey) > 0 {
-		fmt.Println("LastEvaluatedKey", output.LastEvaluatedKey)
-		responseNextToken = output.LastEvaluatedKey[nextTokenKey].(*types.AttributeValueMemberS).Value
+	if len(output.GetExclusiveStartKey()) > 0 {
+		responseNextToken = output.GetExclusiveStartKey()[nextTokenKey].(*types.AttributeValueMemberS).Value
 	}
 	if summaries == nil {
 		summaries = make([]*entities.Summary, 0, 0)
