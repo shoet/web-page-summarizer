@@ -59,6 +59,7 @@ const (
 
 type QueryScanInput struct {
 	TableName                 *string
+	IndexName                 *string
 	ProjectionExpression      *string
 	Limit                     *int32
 	ExclusiveStartKey         map[string]types.AttributeValue
@@ -112,36 +113,49 @@ func (w *ScanOutputWrapper) GetExclusiveStartKey() map[string]types.AttributeVal
 func (r *SummaryRepository) ListTask(
 	ctx context.Context, status *string, nextToken *string, limit int32,
 ) ([]*entities.Summary, *string, error) {
-	nextTokenKey := "id"
+	var output QueryScanOutput
 
-	var err error
-	input := &dynamodb.QueryInput{
-		TableName:            aws.String(r.TableName()),
-		IndexName:            aws.String(r.StatusIndexName()),
-		ProjectionExpression: aws.String("id, title ,task_status, page_url, created_at"),
-		Limit:                aws.Int32(limit),
-	}
 	if status != nil {
+		// statusが指定されている場合はQueryする
+		input := &dynamodb.QueryInput{
+			TableName:            aws.String(r.TableName()),
+			IndexName:            aws.String(r.StatusIndexName()),
+			ProjectionExpression: aws.String("id, title ,task_status, page_url, created_at"),
+			Limit:                aws.Int32(limit),
+		}
 		input.KeyConditionExpression = aws.String("task_status = :task_status")
 		input.ExpressionAttributeValues = map[string]types.AttributeValue{
 			":task_status": &types.AttributeValueMemberS{Value: *status},
 		}
-	}
-	if nextToken != nil {
-		input.ExclusiveStartKey = map[string]types.AttributeValue{
-			nextTokenKey: &types.AttributeValueMemberS{Value: *nextToken},
-		}
-		if status != nil {
+		if nextToken != nil {
+			input.ExclusiveStartKey["id"] = &types.AttributeValueMemberS{Value: *nextToken}
 			input.ExclusiveStartKey["task_status"] = &types.AttributeValueMemberS{Value: *status}
 		}
-	}
-	var output QueryScanOutput
-	o, err := r.db.Query(ctx, input)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed Scan: %w", err)
-	}
-	output = &QueryOutputWrapper{
-		output: o,
+		o, err := r.db.Query(ctx, input)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed Query: %w", err)
+		}
+		output = &QueryOutputWrapper{
+			output: o,
+		}
+	} else {
+		// statusが指定されていない場合はScanする
+		input := &dynamodb.ScanInput{
+			TableName:            aws.String(r.TableName()),
+			IndexName:            aws.String(r.StatusIndexName()),
+			ProjectionExpression: aws.String("id, title ,task_status, page_url, created_at"),
+			Limit:                aws.Int32(limit),
+		}
+		if nextToken != nil {
+			input.ExclusiveStartKey["id"] = &types.AttributeValueMemberS{Value: *nextToken}
+		}
+		o, err := r.db.Scan(ctx, input)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed Scan: %w", err)
+		}
+		output = &ScanOutputWrapper{
+			output: o,
+		}
 	}
 
 	var summaries []*entities.Summary
@@ -154,7 +168,7 @@ func (r *SummaryRepository) ListTask(
 	}
 	var responseNextToken string
 	if len(output.GetExclusiveStartKey()) > 0 {
-		responseNextToken = output.GetExclusiveStartKey()[nextTokenKey].(*types.AttributeValueMemberS).Value
+		responseNextToken = output.GetExclusiveStartKey()["id"].(*types.AttributeValueMemberS).Value
 	}
 	if summaries == nil {
 		summaries = make([]*entities.Summary, 0, 0)
