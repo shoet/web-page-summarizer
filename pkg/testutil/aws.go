@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -129,6 +130,29 @@ func CleanUpTable(t *testing.T, ddb *dynamodb.Client, tableName string, keys []s
 		},
 	})
 	if err != nil {
+		return fmt.Errorf("failed to BatchWriteItem: %v", err)
+	}
+	return nil
+}
+
+func InsertItems(t *testing.T, ddb *dynamodb.Client, tableName string, items []interface{}) error {
+	t.Helper()
+
+	ctx := context.Background()
+
+	wr := make([]types.WriteRequest, len(items), len(items))
+	for i, item := range items {
+		m, err := attributevalue.MarshalMap(item)
+		if err != nil {
+			return fmt.Errorf("failed to MarshalMap: %v", err)
+		}
+		wr[i] = types.WriteRequest{PutRequest: &types.PutRequest{Item: m}}
+	}
+	if _, err := ddb.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+		RequestItems: map[string][]types.WriteRequest{
+			tableName: wr,
+		},
+	}); err != nil {
 		return fmt.Errorf("failed to BatchWriteItem: %v", err)
 	}
 	return nil
