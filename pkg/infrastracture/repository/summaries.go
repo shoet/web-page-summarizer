@@ -81,21 +81,30 @@ func (q *QueryScanInput) Validate(inputType InputType) error {
 }
 
 func (r *SummaryRepository) ListTask(
-	ctx context.Context, status *string, nextToken *string,
+	ctx context.Context, status *string, nextToken *string, limit int32,
 ) ([]*entities.Summary, *string, error) {
-	defaultLimit := 10
 	nextTokenKey := "id"
-	statusV := "failed"
 
 	var err error
 	input := &dynamodb.QueryInput{
-		TableName:              aws.String(r.TableName()),
-		IndexName:              aws.String(r.StatusIndexName()),
-		KeyConditionExpression: aws.String("task_status = :task_status"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":task_status": &types.AttributeValueMemberS{Value: statusV},
-		},
-		Limit: aws.Int32(int32(defaultLimit)),
+		TableName:            aws.String(r.TableName()),
+		IndexName:            aws.String(r.StatusIndexName()),
+		ProjectionExpression: aws.String("id, title ,task_status, page_url, created_at"),
+		Limit:                aws.Int32(limit),
+	}
+	if status != nil {
+		input.KeyConditionExpression = aws.String("task_status = :task_status")
+		input.ExpressionAttributeValues = map[string]types.AttributeValue{
+			":task_status": &types.AttributeValueMemberS{Value: *status},
+		}
+	}
+	if nextToken != nil {
+		input.ExclusiveStartKey = map[string]types.AttributeValue{
+			nextTokenKey: &types.AttributeValueMemberS{Value: *nextToken},
+		}
+		if status != nil {
+			input.ExclusiveStartKey["task_status"] = &types.AttributeValueMemberS{Value: *status}
+		}
 	}
 	output, err := r.db.Query(ctx, input)
 	if err != nil {
@@ -112,6 +121,7 @@ func (r *SummaryRepository) ListTask(
 	}
 	var responseNextToken string
 	if len(output.LastEvaluatedKey) > 0 {
+		fmt.Println("LastEvaluatedKey", output.LastEvaluatedKey)
 		responseNextToken = output.LastEvaluatedKey[nextTokenKey].(*types.AttributeValueMemberS).Value
 	}
 	if summaries == nil {

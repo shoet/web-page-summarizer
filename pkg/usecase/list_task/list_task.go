@@ -8,7 +8,7 @@ import (
 )
 
 type SummaryRepository interface {
-	ListTask(ctx context.Context, status *string, nextToken *string) ([]*entities.Summary, *string, error)
+	ListTask(ctx context.Context, status *string, nextToken *string, limit int32) ([]*entities.Summary, *string, error)
 }
 
 type Usecase struct {
@@ -20,11 +20,13 @@ func NewUsecase(summaryRepository SummaryRepository) *Usecase {
 }
 
 type UsecaseInput struct {
-	Status *string
+	Status    *string
+	NextToken *string
+	Limit     int32
 }
 
 func (u *Usecase) Run(ctx context.Context, input UsecaseInput) ([]*entities.Summary, *string, error) {
-	tasks, nextToken, err := u.SummaryRepository.ListTask(ctx, input.Status, nil)
+	tasks, nextToken, err := u.SummaryRepository.ListTask(ctx, input.Status, input.NextToken, input.Limit)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed ListTask: %w", err)
 	}
