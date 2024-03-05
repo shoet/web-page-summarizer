@@ -48,14 +48,14 @@ package:
   include:
     - functions/**
   exclude:
-    - ./bin/**
+    - ./.bin/**
 
 functions:
   api:
     handler: functions/api/main.go
     package:
       individually: true
-      artifact: ./bin/api.zip
+      artifact: ./.bin/api.zip
     events:
       - http:
           path: /{proxy+}
@@ -91,12 +91,19 @@ resources:
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
+          - AttributeName: task_status
+            AttributeType: S
         KeySchema:
           - AttributeName: id
             KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: StatusIndex
+            KeySchema:
+              - AttributeName: task_status
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
 
     taskQueue:
       Type: AWS::SQS::Queue

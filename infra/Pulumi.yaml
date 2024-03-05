@@ -1,3 +1,0 @@
-name: web-page-summrizer
-runtime: go
-description: A minimal AWS Go Pulumi program

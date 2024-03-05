@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
-	"github.com/shoet/webpagesummary/entities"
-	"github.com/shoet/webpagesummary/queue"
-	"github.com/shoet/webpagesummary/repository"
-	"github.com/shoet/webpagesummary/testutil"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -109,6 +110,7 @@ func Prepare_ExecuteSummaryTask(t *testing.T, ctx context.Context, cfg aws.Confi
 		Id:         taskId,
 		PageUrl:    "https://news.yahoo.co.jp/pickup/6484213",
 		TaskStatus: "request",
+		CreatedAt:  time.Now().Unix(),
 	})
 	if err != nil {
 		t.Fatalf("failed to create summary: %v", err)

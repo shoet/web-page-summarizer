@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/shoet/webpagesummary/testutil"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func TestMain(m *testing.M) {
