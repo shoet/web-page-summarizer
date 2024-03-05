@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -115,6 +116,10 @@ func (r *SummaryRepository) ListTask(
 ) ([]*entities.Summary, *string, error) {
 	var output QueryScanOutput
 
+	if limit < 1 {
+		return nil, nil, fmt.Errorf("limit must be greater than 1")
+	}
+
 	if status != nil {
 		// statusが指定されている場合はQueryする
 		input := &dynamodb.QueryInput{
@@ -173,6 +178,9 @@ func (r *SummaryRepository) ListTask(
 	if summaries == nil {
 		summaries = make([]*entities.Summary, 0, 0)
 	}
+	sort.Slice(summaries, func(x int, y int) bool {
+		return summaries[x].CreatedAt < summaries[y].CreatedAt
+	})
 	return summaries, &responseNextToken, nil
 }
 
