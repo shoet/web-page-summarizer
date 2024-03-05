@@ -1,0 +1,4 @@
+production:
+  dialect: postgres
+  datasource: ${DBDSN}
+  dir: migrations/postgres
