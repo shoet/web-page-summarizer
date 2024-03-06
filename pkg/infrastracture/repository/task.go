@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
@@ -57,4 +58,44 @@ func (r *TaskRepository) UpdateTask(ctx context.Context, tx infrastracture.Trans
 		return fmt.Errorf("failed ExecContext: %w", err)
 	}
 	return nil
+}
+
+type ListTaskInput struct {
+	Status *string
+	Limit  *uint
+	Offset *uint
+}
+
+func (r *TaskRepository) ListTask(
+	ctx context.Context, tx infrastracture.Transactor, input *ListTaskInput,
+) ([]*entities.Task, error) {
+
+	var builder *goqu.SelectDataset
+	builder = goqu.
+		From("tasks").
+		Select("id", "task_id", "task_status", "title", "page_url", "created_at", "updated_at")
+
+	if input.Status != nil {
+		builder = builder.Where(&goqu.Ex{"task_status": input.Status})
+	}
+
+	if input.Offset != nil {
+		builder = builder.Offset(*input.Offset)
+	}
+
+	if input.Limit != nil {
+		builder = builder.Limit(*input.Limit)
+	}
+
+	query, _, err := builder.ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("failed to goqu.ToSQL: %v", err)
+	}
+
+	var tasks []*entities.Task
+	if err := tx.SelectContext(ctx, &tasks, query); err != nil {
+		return nil, fmt.Errorf("failed to SelectContext: %v", err)
+	}
+
+	return tasks, nil
 }
