@@ -4,7 +4,8 @@ go 1.20
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
-	github.com/aws/aws-sdk-go-v2 v1.24.0
+	github.com/aws/aws-sdk-go v1.50.32
+	github.com/aws/aws-sdk-go-v2 v1.25.2
 	github.com/aws/aws-sdk-go-v2/config v1.25.11
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.12.12
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.6
@@ -16,6 +17,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
+	github.com/labstack/gommon v0.4.2
 	github.com/rs/zerolog v1.31.0
 )
 
@@ -32,12 +34,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2 // indirect
-	github.com/aws/smithy-go v1.19.0 // indirect
+	github.com/aws/smithy-go v1.20.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

@@ -64,6 +64,17 @@ functions:
     environment:
       QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
 
+  stream-event:
+    handler: functions/stream-event/main.go
+    package:
+      individually: true
+      artifact: ./.bin/stream-event.zip
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt: [summaryTable, StreamArn]
+
   summary-page:
     image:
       name: summaryPageContainerImage
@@ -104,6 +115,8 @@ resources:
             Projection:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
 
     taskQueue:
       Type: AWS::SQS::Queue
