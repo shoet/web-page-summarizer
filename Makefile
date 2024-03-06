@@ -4,7 +4,7 @@ DOCKER_IMAGE := web-page-summarizer-task
 
 .PHONY: run
 run: ## Run local server
-	go run functions/api/main.go local
+	docker-compose up
 
 .PHONY: build
 build: ## build go binary to bootstrap

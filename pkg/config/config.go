@@ -14,6 +14,10 @@ type Config struct {
 	BrowserDownloadPath string `env:"BROWSER_DOWNLOAD_PATH" envDefault:"/tmp/playwright/browser"`
 }
 
+type RDBConfig struct {
+	RDBDsn string `env:"RDB_DSN,required"`
+}
+
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {

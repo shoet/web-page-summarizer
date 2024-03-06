@@ -74,6 +74,8 @@ functions:
           type: dynamodb
           arn:
             Fn::GetAtt: [summaryTable, StreamArn]
+    environment:
+      RDB_DSN: ${env:RDB_DSN}
 
   summary-page:
     image:
