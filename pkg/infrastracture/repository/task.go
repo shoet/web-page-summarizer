@@ -76,7 +76,7 @@ func (r *TaskRepository) ListTask(
 		Select("id", "task_id", "task_status", "title", "page_url", "created_at", "updated_at")
 
 	if input.Status != nil {
-		builder = builder.Where(&goqu.Ex{"task_status": input.Status})
+		builder = builder.Where(goqu.Ex{"task_status": *input.Status})
 	}
 
 	if input.Offset != nil {
@@ -86,6 +86,8 @@ func (r *TaskRepository) ListTask(
 	if input.Limit != nil {
 		builder = builder.Limit(*input.Limit)
 	}
+
+	builder = builder.Order(goqu.I("id").Desc()) // AutoIncrementの降順で取得
 
 	query, _, err := builder.ToSQL()
 	if err != nil {

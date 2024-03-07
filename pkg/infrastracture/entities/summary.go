@@ -1,6 +1,9 @@
 package entities
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Summary struct {
 	Id               string `json:"id" dynamodbav:"id"`
@@ -21,4 +24,22 @@ type Task struct {
 	Title      string    `json:"title" db:"title"`
 	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt  time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+func (t *Task) JSON() string {
+	b, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
+type Tasks []*Task
+
+func (t Tasks) JSON() string {
+	b, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

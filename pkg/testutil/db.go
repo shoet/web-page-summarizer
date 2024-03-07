@@ -34,8 +34,10 @@ func MigrateRDBPostgres(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+func StrPtr(v string) *string {
+	return &v
+}
+
 func UintPtr(v uint) *uint {
-	var value uint
-	value = v
-	return &value
+	return &v
 }

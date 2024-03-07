@@ -3,8 +3,8 @@ package repository_test
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
-	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/go-cmp/cmp"
@@ -37,15 +37,13 @@ func Test_TaskRepository_ListTask(t *testing.T) {
 		{
 			name: "全件取得",
 			prepare: func(tx infrastracture.Transactor) ([]*entities.Task, error) {
-				tasks := make([]*entities.Task, 0, 10)
-				for i := 0; i < 10; i++ {
+				tasks := make([]*entities.Task, 0, 3)
+				for i := 0; i < 3; i++ {
 					s := &entities.Task{
 						TaskId:     fmt.Sprintf("task_id_%d", i+1),
 						TaskStatus: "complete",
 						Title:      "title",
 						PageUrl:    "page_url",
-						CreatedAt:  time.Unix(0, 0),
-						UpdatedAt:  time.Unix(0, 0),
 					}
 					tasks = append(tasks, s)
 				}
@@ -69,18 +67,111 @@ func Test_TaskRepository_ListTask(t *testing.T) {
 			},
 			wants: wants{
 				tasks: func() []*entities.Task {
-					tasks := make([]*entities.Task, 0, 10)
-					for i := 0; i < 10; i++ {
+					tasks := make([]*entities.Task, 0, 3)
+					for i := 0; i < 3; i++ {
 						s := &entities.Task{
 							TaskId:     fmt.Sprintf("task_id_%d", i+1),
 							TaskStatus: "complete",
 							Title:      "title",
 							PageUrl:    "page_url",
-							CreatedAt:  time.Unix(0, 0),
-							UpdatedAt:  time.Unix(0, 0),
 						}
 						tasks = append(tasks, s)
 					}
+					sort.Slice(tasks, func(i, j int) bool {
+						return tasks[i].TaskId > tasks[j].TaskId
+					})
+					return tasks
+				}(),
+				error: nil,
+			},
+		},
+		{
+			name: "指定件数取得",
+			prepare: func(tx infrastracture.Transactor) ([]*entities.Task, error) {
+				tasks := make([]*entities.Task, 0, 10)
+				for i := 0; i < 10; i++ {
+					s := &entities.Task{
+						TaskId:     fmt.Sprintf("task_id_%d", i+1),
+						TaskStatus: "complete",
+						Title:      "title",
+						PageUrl:    "page_url",
+					}
+					tasks = append(tasks, s)
+				}
+				builder := goqu.
+					Insert("tasks").
+					Cols("task_id", "task_status", "title", "page_url", "created_at", "updated_at").
+					Rows(tasks)
+				query, _, err := builder.ToSQL()
+				if err != nil {
+					return nil, fmt.Errorf("failed to ToSQL: %v", err)
+				}
+				if _, err := tx.ExecContext(context.Background(), query); err != nil {
+					return nil, fmt.Errorf("failed to ExecContext: %v", err)
+				}
+				return tasks, nil
+			},
+			args: args{
+				status: nil,
+				limit:  testutil.UintPtr(5),
+				offset: testutil.UintPtr(1),
+			},
+			wants: wants{
+				tasks: func() []*entities.Task {
+					tasks := make([]*entities.Task, 0, 5)
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_9", TaskStatus: "complete", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_8", TaskStatus: "complete", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_7", TaskStatus: "complete", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_6", TaskStatus: "complete", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_5", TaskStatus: "complete", Title: "title", PageUrl: "page_url"})
+					return tasks
+				}(),
+				error: nil,
+			},
+		},
+		{
+			name: "ステータスrequest取得",
+			prepare: func(tx infrastracture.Transactor) ([]*entities.Task, error) {
+				tasks := make([]*entities.Task, 0, 10)
+				for i := 0; i < 10; i++ {
+					s := &entities.Task{
+						TaskId: fmt.Sprintf("task_id_%d", i+1),
+						TaskStatus: func() string {
+							if i < 7 {
+								return "complete"
+							} else {
+								return "request"
+							}
+						}(),
+						Title:   "title",
+						PageUrl: "page_url",
+					}
+					tasks = append(tasks, s)
+				}
+				builder := goqu.
+					Insert("tasks").
+					Cols("task_id", "task_status", "title", "page_url", "created_at", "updated_at").
+					Rows(tasks)
+				query, _, err := builder.ToSQL()
+				if err != nil {
+					return nil, fmt.Errorf("failed to ToSQL: %v", err)
+				}
+				if _, err := tx.ExecContext(context.Background(), query); err != nil {
+					return nil, fmt.Errorf("failed to ExecContext: %v", err)
+				}
+				return tasks, nil
+			},
+			args: args{
+				status: testutil.StrPtr("request"),
+				limit:  testutil.UintPtr(10),
+				offset: testutil.UintPtr(0),
+			},
+			wants: wants{
+				tasks: func() []*entities.Task {
+					tasks := make([]*entities.Task, 0, 5)
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_10", TaskStatus: "request", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_9", TaskStatus: "request", Title: "title", PageUrl: "page_url"})
+					tasks = append(tasks, &entities.Task{TaskId: "task_id_8", TaskStatus: "request", Title: "title", PageUrl: "page_url"})
 					return tasks
 				}(),
 				error: nil,
@@ -116,14 +207,19 @@ func Test_TaskRepository_ListTask(t *testing.T) {
 				Limit:  tt.args.limit,
 				Offset: tt.args.offset,
 			}
+
 			tasks, err := repo.ListTask(context.Background(), tx, input)
 			if err != tt.wants.error {
 				t.Errorf("got: %v, want: %v", err, tt.wants.error)
 			}
 
-			cmpOpts := cmpopts.IgnoreFields(entities.Task{}, "Id")
+			cmpOpts := cmpopts.IgnoreFields(entities.Task{}, "Id", "CreatedAt", "UpdatedAt")
 			if diff := cmp.Diff(tasks, tt.wants.tasks, cmpOpts); diff != "" {
 				t.Errorf("got: %v, want: %v", tasks, tt.wants.tasks)
+				var t entities.Tasks = tasks
+				fmt.Println(t.JSON())
+				t = tt.wants.tasks
+				fmt.Println(t.JSON())
 			}
 		})
 	}
