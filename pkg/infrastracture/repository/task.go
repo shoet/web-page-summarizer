@@ -15,11 +15,10 @@ task.goはRDB上のtaskテーブルにアクセスするためのリポジトリ
 */
 
 type TaskRepository struct {
-	db *infrastracture.DBHandler
 }
 
-func NewTaskRepository(db *infrastracture.DBHandler) *TaskRepository {
-	return &TaskRepository{db: db}
+func NewTaskRepository() *TaskRepository {
+	return &TaskRepository{}
 }
 
 func (r *TaskRepository) AddTask(ctx context.Context, tx infrastracture.Transactor, t *entities.Summary) error {

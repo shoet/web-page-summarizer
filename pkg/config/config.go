@@ -25,3 +25,11 @@ func NewConfig() (*Config, error) {
 	}
 	return cfg, nil
 }
+
+func NewRDBConfig() (*RDBConfig, error) {
+	cfg := &RDBConfig{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("failed Parse config: %w", err)
+	}
+	return cfg, nil
+}
