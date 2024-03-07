@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 	"github.com/shoet/webpagesummary/pkg/presentation/response"
 	"github.com/shoet/webpagesummary/pkg/usecase/list_task"
 )
@@ -61,11 +60,5 @@ func (l *ListTaskHandler) Handler(ctx echo.Context) error {
 		return response.RespondInternalServerError(ctx, nil)
 	}
 
-	response := struct {
-		Tasks []*entities.Task `json:"tasks"`
-	}{
-		Tasks: tasks,
-	}
-
-	return ctx.JSON(http.StatusOK, response)
+	return ctx.JSON(http.StatusOK, tasks)
 }
