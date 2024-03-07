@@ -4,12 +4,14 @@ DOCKER_IMAGE := web-page-summarizer-task
 
 .PHONY: run
 run: ## Run local server
-	go run functions/api/main.go local
+	docker-compose up
 
 .PHONY: build
 build: ## build go binary to bootstrap
 	env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/api/bootstrap functions/api/main.go \
-	&& zip -j ./.bin/api.zip ./.bin/api/bootstrap
+	&& zip -j ./.bin/api.zip ./.bin/api/bootstrap \
+	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/stream-event/bootstrap functions/stream-event/main.go \
+	&& zip -j ./.bin/stream-event.zip ./.bin/stream-event/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary

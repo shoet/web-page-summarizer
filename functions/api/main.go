@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/shoet/webpagesummary/pkg/config"
+	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
 )
@@ -27,9 +28,15 @@ func BuildEchoServer() (*echo.Echo, error) {
 	validator := validator.New()
 	ctx := context.Background()
 
-	config, err := config.NewConfig()
+	cfg, err := config.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed load config: %s", err.Error())
+	}
+
+	rdbCfg, err := config.NewRDBConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed load rdb config: %s", err.Error())
+
 	}
 
 	awsCfg, err := awsConfig.LoadDefaultConfig(ctx)
@@ -38,8 +45,16 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	ddb := dynamodb.NewFromConfig(awsCfg)
-	queueClient := queue.NewQueueClient(awsCfg, config.QueueUrl)
-	deps, err := server.NewServerDependencies(validator, queueClient, ddb)
+	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
+	rdbHandler, err := infrastracture.NewDBHandler(rdbCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())
+	}
+
+	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler)
+	if err != nil {
+		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
+	}
 
 	srv, err := server.NewServer(deps)
 	return srv, err

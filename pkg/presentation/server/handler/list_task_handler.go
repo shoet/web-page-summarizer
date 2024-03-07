@@ -20,23 +20,25 @@ func NewListTaskHandler(usecase *list_task.Usecase) *ListTaskHandler {
 }
 
 const (
-	defaultLimit int = 10
+	defaultLimit  int = 10
+	defaultOffset int = 0
 )
 
 type PageNation struct {
-	PageLimit int `query:"limit"`
+	PageLimit  int `query:"limit"`
+	PageOffset int `query:"offset"`
 }
 
 func NewPageNation() PageNation {
 	return PageNation{
-		PageLimit: defaultLimit,
+		PageLimit:  defaultLimit,
+		PageOffset: defaultOffset,
 	}
 }
 
 func (l *ListTaskHandler) Handler(ctx echo.Context) error {
 	type Request struct {
-		Status    *string `query:"status"`
-		NextToken *string `query:"next_token"`
+		Status *string `query:"status"`
 		PageNation
 	}
 
@@ -49,23 +51,20 @@ func (l *ListTaskHandler) Handler(ctx echo.Context) error {
 	}
 
 	input := list_task.UsecaseInput{
-		Status:    request.Status,
-		Limit:     int32(request.PageLimit),
-		NextToken: request.NextToken,
+		Status: request.Status,
+		Limit:  uint(request.PageLimit),
 	}
 
-	tasks, nextToken, err := l.Usecase.Run(ctx.Request().Context(), input)
+	tasks, err := l.Usecase.Run(ctx.Request().Context(), input)
 	if err != nil {
 		ctx.Logger().Errorf("failed to Usecase.Run: %v", err)
 		return response.RespondInternalServerError(ctx, nil)
 	}
 
 	response := struct {
-		Tasks     []*entities.Summary `json:"tasks"`
-		NextToken *string             `json:"nextToken,omitempty"`
+		Tasks []*entities.Task `json:"tasks"`
 	}{
-		Tasks:     tasks,
-		NextToken: nextToken,
+		Tasks: tasks,
 	}
 
 	return ctx.JSON(http.StatusOK, response)

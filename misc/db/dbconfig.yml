@@ -1,0 +1,9 @@
+production:
+  dialect: postgres
+  datasource: ${DBDSN}
+  dir: migrations/postgres
+
+test:
+  dialect: postgres
+  datasource: postgresql://root:root@127.0.0.1:5432/postgres?sslmode=disable
+  dir: migrations/postgres

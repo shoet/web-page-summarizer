@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"testing"
@@ -68,6 +69,11 @@ func MustSetup() *SetUpOutput {
 		},
 		BillingMode: types.BillingModePayPerRequest,
 	}); err != nil {
+		var e *types.ResourceInUseException
+		if errors.As(err, &e) {
+			fmt.Printf("table already exists: %s\n", tableName)
+			return nil
+		}
 		panic(fmt.Sprintf("failed create dynamodb: %s\n", err.Error()))
 	}
 	return &SetUpOutput{}
