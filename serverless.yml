@@ -63,6 +63,7 @@ functions:
           private: true
     environment:
       QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
+      RDB_DSN: ${env:RDB_DSN}
 
   stream-event:
     handler: functions/stream-event/main.go

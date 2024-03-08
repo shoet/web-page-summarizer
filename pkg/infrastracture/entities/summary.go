@@ -3,6 +3,8 @@ package entities
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 type Summary struct {
@@ -14,6 +16,13 @@ type Summary struct {
 	Summary          string `json:"summary,omitempty" dynamodbav:"summary,omitempty"`
 	TaskFailedReason string `json:"taskFailedReason,omitempty" dynamodbav:"task_failed_reason,omitempty"`
 	CreatedAt        int64  `json:"createdAt" dynamodbav:"created_at,omitempty"`
+}
+
+func (s Summary) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("id", s.Id).
+		Str("taskStatus", s.TaskStatus).
+		Str("taskFailedReason", s.TaskFailedReason).
+		Int64("createdAt", s.CreatedAt)
 }
 
 type Task struct {

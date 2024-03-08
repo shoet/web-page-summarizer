@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -13,6 +14,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
+	"github.com/shoet/webpagesummary/pkg/logging"
 	"golang.org/x/net/context"
 )
 
@@ -27,53 +29,76 @@ type TaskRepository interface {
 }
 
 func Handler(event events.DynamoDBEvent) error {
-	r := event.Records[0]
-	eventName := r.EventName
+	logger := logging.NewLogger(os.Stdout)
+	for _, r := range event.Records {
+		eventName := r.EventName
 
-	var s entities.Summary
-	if err := unmarshalDDBEventRecord(r.Change.NewImage, &s); err != nil {
-		return fmt.Errorf("failed unmarshalDDBEventRecord: %w", err)
-	}
+		var s entities.Summary
+		if err := unmarshalDDBEventRecord(r.Change.NewImage, &s); err != nil {
+			return fmt.Errorf("failed unmarshalDDBEventRecord: %w", err)
+		}
 
-	cfg := &config.RDBConfig{}
-	if err := env.Parse(cfg); err != nil {
-		return fmt.Errorf("failed envconfig.Process: %w", err)
-	}
+		logger.SetStr("eventName", eventName)
+		logger.SetStr("id", s.Id)
+		if err := logger.SetObject("summary", s); err != nil {
+			return fmt.Errorf("failed to set logger SetRawJSON: %v", err)
+		}
 
-	rdbHandler, err := infrastracture.NewDBHandler(cfg)
-	if err != nil {
-		return fmt.Errorf("failed NewDBHandler: %w", err)
-	}
+		logger.Info("Handle stream function")
 
-	repo := repository.NewTaskRepository(rdbHandler)
+		cfg := &config.RDBConfig{}
+		if err := env.Parse(cfg); err != nil {
+			return fmt.Errorf("failed envconfig.Process: %w", err)
+		}
 
-	ctx := context.Background()
-
-	switch eventName {
-	case EventNameInsert:
-		tx, err := rdbHandler.GetTransaction()
-		defer tx.Rollback()
+		rdbHandler, err := infrastracture.NewDBHandler(cfg)
 		if err != nil {
-			return fmt.Errorf("failed GetTransaction: %w", err)
+			return fmt.Errorf("failed NewDBHandler: %w", err)
 		}
-		if err := repo.AddTask(ctx, tx, &s); err != nil {
-			return fmt.Errorf("failed AddTask: %w", err)
+
+		repo := repository.NewTaskRepository()
+
+		ctx := context.Background()
+
+		switch eventName {
+		case EventNameInsert:
+			tx, err := rdbHandler.GetTransaction()
+			if err := func() error { // トランザクションの範囲を制限する
+				defer tx.Rollback()
+				if err != nil {
+					return fmt.Errorf("failed GetTransaction: %w", err)
+				}
+				if err := repo.AddTask(ctx, tx, &s); err != nil {
+					return fmt.Errorf("failed AddTask: %w", err)
+				}
+				if err := tx.Commit(); err != nil {
+					return fmt.Errorf("failed tx.Commit: %w", err)
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		case EventNameModify:
+			tx, err := rdbHandler.GetTransaction()
+			if err := func() error { // トランザクションの範囲を制限する
+				defer tx.Rollback()
+				if err != nil {
+					return fmt.Errorf("failed GetTransaction: %w", err)
+				}
+				if err := repo.UpdateTask(ctx, tx, &s); err != nil {
+					return fmt.Errorf("failed UpdateTask: %w", err)
+				}
+				if err := tx.Commit(); err != nil {
+					return fmt.Errorf("failed tx.Commit: %w", err)
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed tx.Commit: %w", err)
-		}
-	case EventNameModify:
-		tx, err := rdbHandler.GetTransaction()
-		defer tx.Rollback()
-		if err != nil {
-			return fmt.Errorf("failed GetTransaction: %w", err)
-		}
-		if err := repo.UpdateTask(ctx, tx, &s); err != nil {
-			return fmt.Errorf("failed UpdateTask: %w", err)
-		}
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed tx.Commit: %w", err)
-		}
+
+		logger.Info("Success handle stream")
+
 	}
 
 	return nil
