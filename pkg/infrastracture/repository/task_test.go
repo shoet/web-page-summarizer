@@ -185,7 +185,7 @@ func Test_TaskRepository_ListTask(t *testing.T) {
 		t.Fatalf("failed to NewDBHandler: %v", err)
 	}
 
-	repo := repository.NewTaskRepository(dbHandler)
+	repo := repository.NewTaskRepository()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

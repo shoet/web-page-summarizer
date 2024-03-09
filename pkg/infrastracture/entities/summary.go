@@ -2,7 +2,6 @@ package entities
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -26,13 +25,13 @@ func (s Summary) MarshalZerologObject(e *zerolog.Event) {
 }
 
 type Task struct {
-	Id         uint      `json:"id" db:"id" goqu:"skipinsert"`
-	TaskId     string    `json:"taskId" db:"task_id"`
-	TaskStatus string    `json:"taskStatus" db:"task_status"`
-	PageUrl    string    `json:"pageUrl" db:"page_url"`
-	Title      string    `json:"title" db:"title"`
-	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt  time.Time `json:"updatedAt" db:"updated_at"`
+	Id         uint   `json:"id" db:"id" goqu:"skipinsert"`
+	TaskId     string `json:"taskId" db:"task_id"`
+	TaskStatus string `json:"taskStatus" db:"task_status"`
+	PageUrl    string `json:"pageUrl" db:"page_url"`
+	Title      string `json:"title" db:"title"`
+	CreatedAt  uint   `json:"createdAt" db:"created_at"`
+	UpdatedAt  uint   `json:"updatedAt" db:"updated_at"`
 }
 
 func (t *Task) JSON() string {

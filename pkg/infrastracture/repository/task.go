@@ -31,7 +31,7 @@ func (r *TaskRepository) AddTask(ctx context.Context, tx infrastracture.Transact
 	`
 	if _, err := tx.ExecContext(
 		ctx, query,
-		t.Id, t.TaskStatus, t.Title, t.PageUrl, now, now,
+		t.Id, t.TaskStatus, t.Title, t.PageUrl, now.Unix(), now.Unix(),
 	); err != nil {
 		return fmt.Errorf("failed ExecContext: %w", err)
 	}
@@ -52,7 +52,7 @@ func (r *TaskRepository) UpdateTask(ctx context.Context, tx infrastracture.Trans
 	`
 	if _, err := tx.ExecContext(
 		ctx, query,
-		t.Id, t.TaskStatus, t.Title, t.PageUrl, now,
+		t.Id, t.TaskStatus, t.Title, t.PageUrl, now.Unix(),
 	); err != nil {
 		return fmt.Errorf("failed ExecContext: %w", err)
 	}
