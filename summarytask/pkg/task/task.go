@@ -88,6 +88,9 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 	summary, err := st.chatgpt.ChatCompletions(&chatgpt.ChatCompletionsInput{
 		Text: summaryTemplate,
 	})
+	if summary == "" {
+		return fmt.Errorf("failed to get summary is empty: %w", err)
+	}
 	s.Summary = summary
 	s.TaskStatus = "complete"
 
