@@ -17,6 +17,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
+	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
 
 func ExitOnErr(err error) {
@@ -57,6 +58,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	srv, err := server.NewServer(deps)
+	srv.Use(middleware.SetHeaderMiddleware)
 	return srv, err
 }
 

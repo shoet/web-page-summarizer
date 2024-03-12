@@ -60,7 +60,18 @@ functions:
       - http:
           path: /{proxy+}
           method: any
-          private: true
+          cors:
+            origins:
+              - "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - Access-Control-Allow-Origin
+            allowCredentials: true
     environment:
       QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
       RDB_DSN: ${env:RDB_DSN}
