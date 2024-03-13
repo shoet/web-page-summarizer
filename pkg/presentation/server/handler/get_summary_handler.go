@@ -25,6 +25,7 @@ func NewGetSummaryHandler(
 
 func (g *GetSummaryHandler) Handler(ctx echo.Context) error {
 	requestCtx := ctx.Request().Context()
+	ctx.Logger().Info("get summary handler")
 
 	body := struct {
 		Id string `json:"id" validate:"required"`

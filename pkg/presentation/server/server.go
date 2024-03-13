@@ -5,6 +5,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
@@ -46,6 +47,7 @@ func NewServerDependencies(
 func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server := echo.New()
 
+	server.Logger.SetLevel(log.INFO)
 	server.Use(middleware.CORS())
 
 	hch := handler.NewHealthCheckHandler()

@@ -2,9 +2,17 @@
 
 DOCKER_IMAGE := web-page-summarizer-task
 
-.PHONY: run
-run: ## Run local server
-	docker-compose up
+.PHONY: up
+up: ## Run local server
+	docker-compose up -d
+
+.PHONY: logs
+logs: ## Show logs
+	docker-compose logs -f
+
+.PHONY: down
+down: ## Stop local server
+	docker-compose down
 
 .PHONY: build
 build: ## build go binary to bootstrap

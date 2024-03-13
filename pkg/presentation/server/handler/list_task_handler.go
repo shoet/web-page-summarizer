@@ -36,6 +36,8 @@ func NewPageNation() PageNation {
 }
 
 func (l *ListTaskHandler) Handler(ctx echo.Context) error {
+	ctx.Logger().Info("list task handler")
+
 	type Request struct {
 		Status *string `query:"status"`
 		PageNation

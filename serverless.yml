@@ -60,20 +60,11 @@ functions:
       - http:
           path: /{proxy+}
           method: any
-          cors:
-            origins:
-              - "*"
-            headers:
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-              - Access-Control-Allow-Origin
-            allowCredentials: true
     environment:
-      QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
+      QUEUE_URL:
+        Fn::GetAtt:
+          - taskQueue
+          - QueueUrl
       RDB_DSN: ${env:RDB_DSN}
 
   stream-event:
@@ -94,7 +85,10 @@ functions:
       name: summaryPageContainerImage
     description: summary web page
     environment:
-      QUEUE_URL: ${ssm:/web-page-summarizer/task/QUEUE_URL}
+      QUEUE_URL:
+        Fn::GetAtt:
+          - taskQueue
+          - QueueUrl
       OPENAI_API_KEY: ${ssm:/web-page-summarizer/task/OPENAI_API_KEY}
     timeout: 300
     memorySize: 2048

@@ -24,6 +24,8 @@ func NewSummaryTaskHandler(
 }
 
 func (s *SummaryTaskHandler) Handler(c echo.Context) error {
+	c.Logger().Info("summary task handler")
+
 	body := struct {
 		Url string `json:"url" validate:"required"`
 	}{}
