@@ -33,3 +33,17 @@ func NewRDBConfig() (*RDBConfig, error) {
 	}
 	return cfg, nil
 }
+
+type CognitoConfig struct {
+	CognitoUserPoolID string `env:"COGNITO_USER_POOL_ID,required"`
+	CognitoClientID   string `env:"COGNITO_CLIENT_ID,required"`
+	CognitoIDPoolID   string `env:"COGNITO_ID_POOL_ID,required"`
+}
+
+func NewCognitoConfig() (*CognitoConfig, error) {
+	var config CognitoConfig
+	if err := env.Parse(&config); err != nil {
+		return nil, fmt.Errorf("failed to parse config: %w", err)
+	}
+	return &config, nil
+}
