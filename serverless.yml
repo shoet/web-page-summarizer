@@ -136,6 +136,88 @@ resources:
           - Key: Name
             Value: web_page_summary
 
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: WebPageSummarizerCognitoAuthorizer
+        IdentitySource: method.request.header.Authorization
+        RestApiId: !Ref ApiGatewayRestApi
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - !GetAtt CognitoUserPool.Arn
+
+    CognitoIdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      Properties:
+        IdentityPoolName: WebPageSummarizerCognitoIdentityPool
+        AllowUnauthenticatedIdentities: false
+        CognitoIdentityProviders:
+          - ClientId: !Ref CognitoUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: WebPageSummarizerCognitoUserPool
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+            RequireNumbers: true
+        Schema:
+          - Name: email
+            Required: true
+            AttributeDataType: String
+            Mutable: true
+          - Name: name
+            Required: true
+            AttributeDataType: String
+            Mutable: true
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: WebPageSummarizerCognitoUserPoolClient
+        UserPoolId: !Ref CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+        GenerateSecret: false
+
+    CognitoAuthHandlerRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: WebPageSummarizerCognitoAuthHandlerRole
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource: "*"
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicyCognito
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "cognito-idp:AdminInitiateAuth"
+                  Resource: !GetAtt CognitoUserPool.Arn
+
     # パラメータストアにKEY・URLを登録
     restApiKey:
       Type: AWS::SSM::Parameter
