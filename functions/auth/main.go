@@ -19,13 +19,19 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	config, err := config.NewCognitoConfig()
 	if err != nil {
 		fmt.Printf("Error creating config: %v", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, fmt.Errorf("InternalServerError")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
 	}
 
 	cognitoService, err := adapter.NewCognitoService(ctx, config.CognitoClientID, config.CognitoUserPoolID)
 	if err != nil {
 		fmt.Printf("Error creating cognito service: %v", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, fmt.Errorf("InternalServerError")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
 	}
 
 	var requestBody struct {
@@ -34,25 +40,37 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	}
 	if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(&requestBody); err != nil {
 		fmt.Printf("Error decoding request body: %v", err)
-		return events.APIGatewayProxyResponse{}, fmt.Errorf("BadRequest")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       "BadRequest",
+		}, nil
 	}
 
 	v := validator.New()
 	if err := v.Struct(requestBody); err != nil {
 		fmt.Printf("Error validating request body: %v", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadRequest}, fmt.Errorf("BadRequest")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       "BadRequest",
+		}, nil
 	}
 
 	session, err := cognitoService.Login(ctx, requestBody.Email, requestBody.Password)
 	if err != nil {
 		fmt.Printf("Error logging in: %v", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusUnauthorized}, fmt.Errorf("Unauthorized")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
 	}
 
 	b, err := json.Marshal(session)
 	if err != nil {
 		fmt.Printf("Error marshalling response: %v", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadRequest}, fmt.Errorf("InternalServerError")
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       "BadRequest",
+		}, nil
 	}
 
 	authTokenCookie := &http.Cookie{

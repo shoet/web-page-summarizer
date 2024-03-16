@@ -65,6 +65,24 @@ functions:
       COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
 
+  session:
+    handler: functions/session/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/session.zip
+    events:
+      - http:
+          path: /auth/me
+          method: GET
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+    environment:
+      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+
   api:
     handler: functions/api/main.go
     package:

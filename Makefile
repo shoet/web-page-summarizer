@@ -21,7 +21,9 @@ build: ## build go binary to bootstrap
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/stream-event/bootstrap functions/stream-event/main.go \
 	&& zip -j ./.bin/stream-event.zip ./.bin/stream-event/bootstrap \
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/auth/bootstrap functions/auth/main.go \
-	&& zip -j ./.bin/auth.zip ./.bin/auth/bootstrap
+	&& zip -j ./.bin/auth.zip ./.bin/auth/bootstrap \
+	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/session/bootstrap functions/session/main.go \
+	&& zip -j ./.bin/session.zip ./.bin/session/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary
