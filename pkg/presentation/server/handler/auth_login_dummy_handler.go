@@ -30,6 +30,7 @@ func NewAuthLoginDummyHandler(cognitoService CognitoService, validator *validato
 }
 
 func (a *AuthLoginHandler) Handler(ctx echo.Context) error {
+	ctx.Logger().Info("AuthLoginHandler.Handler")
 	var requestBody struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required"`

@@ -53,6 +53,7 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 
 	server.Logger.SetLevel(log.INFO)
 	server.Use(middleware.CORS())
+	server.Use(middleware.Logger())
 
 	hch := handler.NewHealthCheckHandler()
 	server.GET("/health", hch.Handler)
