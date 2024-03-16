@@ -1,11 +1,15 @@
 package server
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
@@ -65,6 +69,23 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	// 一覧取得
 	// パラメータstatus
 	// paging
+
+	return server, nil
+}
+
+// ローカル実行時にAuthorizerをモックするためのハンドラー
+func OnLocalServer(server *echo.Echo, config *config.CognitoConfig) (*echo.Echo, error) {
+	cognitoService, err := adapter.NewCognitoService(
+		context.Background(), config.CognitoClientID, config.CognitoUserPoolID)
+	if err != nil {
+		return nil, fmt.Errorf("failed create cognito service: %s", err.Error())
+	}
+	validator := validator.New()
+	dummy_auth := handler.NewAuthLoginDummyHandler(cognitoService, validator)
+	server.POST("/auth", dummy_auth.Handler)
+
+	dummy_auth_me := handler.NewAuthMeDummyHandler()
+	server.GET("/auth/me", dummy_auth_me.Handler)
 
 	return server, nil
 }

@@ -58,6 +58,23 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	srv, err := server.NewServer(deps)
+	if err != nil {
+		return nil, fmt.Errorf("failed create server: %s", err.Error())
+	}
+
+	// Local環境ではAuthorizerのエンドポイントを立てる
+	execEnv := os.Getenv("ENV")
+	if execEnv == "local" {
+		cognitoConfig, err := testutil.LoadCognitoConfigLocal()
+		if err != nil {
+			return nil, fmt.Errorf("failed load cognito config: %s", err.Error())
+		}
+		srv, err = server.OnLocalServer(srv, cognitoConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed set local server: %s", err.Error())
+		}
+	}
+
 	srv.Use(middleware.SetHeaderMiddleware)
 	return srv, err
 }

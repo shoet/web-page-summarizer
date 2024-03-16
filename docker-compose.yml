@@ -10,6 +10,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      ENV: local
       QUEUE_URL: ${QUEUE_URL:?err}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?err}
       EXEC_TIMEOUT_SEC: 300

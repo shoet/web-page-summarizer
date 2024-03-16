@@ -7,6 +7,7 @@ import (
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
 
 type CognitoService struct {
@@ -28,13 +29,7 @@ func NewCognitoService(ctx context.Context, clientId string, userPoolId string) 
 	}, nil
 }
 
-type LoginSession struct {
-	IdToken      string `json:"idToken"`
-	AccessToken  string `jsonn:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-}
-
-func (c *CognitoService) Login(ctx context.Context, email, password string) (*LoginSession, error) {
+func (c *CognitoService) Login(ctx context.Context, email, password string) (*entities.LoginSession, error) {
 	res, err := c.client.AdminInitiateAuth(ctx, &cognitoidentityprovider.AdminInitiateAuthInput{
 		AuthFlow:   types.AuthFlowTypeAdminUserPasswordAuth,
 		ClientId:   &c.clientID,
@@ -52,7 +47,7 @@ func (c *CognitoService) Login(ctx context.Context, email, password string) (*Lo
 		return nil, fmt.Errorf("authentication result is nil: %w", err)
 	}
 
-	session := &LoginSession{
+	session := &entities.LoginSession{
 		IdToken:      *res.AuthenticationResult.IdToken,
 		AccessToken:  *res.AuthenticationResult.AccessToken,
 		RefreshToken: *res.AuthenticationResult.RefreshToken,

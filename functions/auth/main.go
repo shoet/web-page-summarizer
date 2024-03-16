@@ -13,27 +13,24 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
 
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	config, err := config.NewCognitoConfig()
-	if err != nil {
-		fmt.Printf("Error creating config: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
-	}
+type CognitoService interface {
+	Login(ctx context.Context, email, password string) (*entities.LoginSession, error)
+}
 
-	cognitoService, err := adapter.NewCognitoService(ctx, config.CognitoClientID, config.CognitoUserPoolID)
-	if err != nil {
-		fmt.Printf("Error creating cognito service: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
-	}
+type AuthHandler struct {
+	CognitoService CognitoService
+}
 
+func NewAuthHandler(cognitoService CognitoService) *AuthHandler {
+	return &AuthHandler{
+		CognitoService: cognitoService,
+	}
+}
+
+func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var requestBody struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
@@ -55,7 +52,7 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 		}, nil
 	}
 
-	session, err := cognitoService.Login(ctx, requestBody.Email, requestBody.Password)
+	session, err := a.CognitoService.Login(ctx, requestBody.Email, requestBody.Password)
 	if err != nil {
 		fmt.Printf("Error logging in: %v", err)
 		return events.APIGatewayProxyResponse{
@@ -93,5 +90,19 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 }
 
 func main() {
-	lambda.Start(Handler)
+	config, err := config.NewCognitoConfig()
+	if err != nil {
+		fmt.Printf("Error creating config: %v", err)
+		panic(err)
+	}
+
+	cognitoService, err := adapter.NewCognitoService(context.Background(), config.CognitoClientID, config.CognitoUserPoolID)
+	if err != nil {
+		fmt.Printf("Error creating cognito service: %v", err)
+		panic(err)
+	}
+
+	handler := NewAuthHandler(cognitoService)
+
+	lambda.Start(handler.Handle)
 }

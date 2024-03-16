@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,24 +12,27 @@ import (
 
 func LoadCognitoConfigForTest(t *testing.T) (*config.CognitoConfig, error) {
 	t.Helper()
+	return LoadCognitoConfigLocal()
+}
 
+func LoadCognitoConfigLocal() (*config.CognitoConfig, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("failed to get current working directory: %v", err)
+		return nil, fmt.Errorf("failed to get current working directory: %v", err)
 	}
 
 	projectRootDir, err := GetProjectRootDir(cwd, 10)
 	if err != nil {
-		t.Fatalf("failed to get project root dir: %v", err)
+		return nil, fmt.Errorf("failed to get project root directory: %v", err)
 	}
 
 	dotEnvPath := filepath.Join(projectRootDir, ".env")
 	if err := godotenv.Load(dotEnvPath); err != nil {
-		t.Fatalf("failed to load .env: %v", err)
+		return nil, fmt.Errorf("failed to load .env file: %v", err)
 	}
 	cfg, err := config.NewCognitoConfig()
 	if err != nil {
-		t.Fatalf("failed to create config: %v", err)
+		return nil, fmt.Errorf("failed to load cognito config: %v", err)
 	}
 	return cfg, nil
 }
