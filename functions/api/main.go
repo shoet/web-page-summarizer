@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
@@ -46,7 +46,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	ddb := dynamodb.NewFromConfig(awsCfg)
-	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
+	queueClient := adapter.NewQueueClient(awsCfg, cfg.QueueUrl)
 	rdbHandler, err := infrastracture.NewDBHandler(rdbCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())

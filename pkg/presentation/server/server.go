@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/handler"
 	"github.com/shoet/webpagesummary/pkg/usecase/get_summary"
@@ -24,7 +24,7 @@ type ServerDependencies struct {
 
 func NewServerDependencies(
 	validator *validator.Validate,
-	queueClient *queue.QueueClient,
+	queueClient *adapter.QueueClient,
 	ddbClient *dynamodb.Client,
 	rdbHandler *infrastracture.DBHandler,
 ) (*ServerDependencies, error) {

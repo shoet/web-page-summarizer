@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/shoet/web-page-summarizer-task/pkg/chatgpt"
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/testutil"
 )
@@ -100,7 +100,7 @@ func MustTeardown(input *TeardownInput) {
 func Prepare_ExecuteSummaryTask(t *testing.T, ctx context.Context, cfg aws.Config) string {
 	t.Helper()
 	taskId := "test_Test_ExecuteSummaryTask"
-	queueClient := queue.NewQueueClient(cfg, queueUrl)
+	queueClient := adapter.NewQueueClient(cfg, queueUrl)
 	if err := queueClient.Queue(ctx, taskId); err != nil {
 		t.Fatalf("failed to queue: %v", err)
 	}
