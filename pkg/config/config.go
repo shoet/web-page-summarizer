@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	Env                 string `env:"ENV"`
 	QueueUrl            string `env:"QUEUE_URL,required"`
 	BrowserPath         string `env:"BROWSER_PATH"`
 	OpenAIApiKey        string `env:"OPENAI_API_KEY"`

@@ -18,6 +18,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func ExitOnErr(err error) {
@@ -63,8 +64,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	// Local環境ではAuthorizerのエンドポイントを立てる
-	execEnv := os.Getenv("ENV")
-	if execEnv == "local" {
+	if cfg.Env == "local" {
 		cognitoConfig, err := testutil.LoadCognitoConfigLocal()
 		if err != nil {
 			return nil, fmt.Errorf("failed load cognito config: %s", err.Error())
