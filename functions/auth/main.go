@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/core"
 	"github.com/go-playground/validator/v10"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
@@ -31,17 +31,29 @@ func NewAuthHandler(cognitoService CognitoService) *AuthHandler {
 }
 
 func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	convertor := core.RequestAccessor{}
+	httpRequest, err := convertor.EventToRequest(req)
+	if err != nil {
+		fmt.Printf("Error converting request: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+	}
+
 	var requestBody struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
 	}
-	if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(&requestBody); err != nil {
+	if err := json.NewDecoder(httpRequest.Body).Decode(&requestBody); err != nil {
 		fmt.Printf("Error decoding request body: %v", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
 			Body:       "BadRequest",
 		}, nil
 	}
+	defer httpRequest.Body.Close()
 
 	v := validator.New()
 	if err := v.Struct(requestBody); err != nil {
@@ -78,6 +90,7 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	}
+
 	return events.APIGatewayProxyResponse{
 		IsBase64Encoded: false,
 		StatusCode:      200,
