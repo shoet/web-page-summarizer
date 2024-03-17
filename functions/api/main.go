@@ -17,7 +17,6 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
-	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
@@ -75,7 +74,6 @@ func BuildEchoServer() (*echo.Echo, error) {
 		}
 	}
 
-	srv.Use(middleware.SetHeaderMiddleware)
 	return srv, err
 }
 

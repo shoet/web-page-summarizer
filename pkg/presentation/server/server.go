@@ -7,13 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/handler"
+	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 	"github.com/shoet/webpagesummary/pkg/usecase/get_summary"
 	"github.com/shoet/webpagesummary/pkg/usecase/list_task"
 	"github.com/shoet/webpagesummary/pkg/usecase/request_task"
@@ -52,8 +53,8 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server := echo.New()
 
 	server.Logger.SetLevel(log.INFO)
-	server.Use(middleware.CORS())
-	server.Use(middleware.Logger())
+	server.Use(echoMiddleware.Logger())
+	server.Use(middleware.SetHeaderMiddleware)
 
 	hch := handler.NewHealthCheckHandler()
 	server.GET("/health", hch.Handler)

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -52,10 +51,11 @@ func (a *AuthLoginHandler) Handler(ctx echo.Context) error {
 	authTokenCookie := &http.Cookie{
 		Name:     "authToken",
 		Value:    session.IdToken,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-		Secure:   true,
+		MaxAge:   1000 * 60 * 60 * 24 * 7,
+		HttpOnly: false,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	}
 
 	ctx.SetCookie(authTokenCookie)
