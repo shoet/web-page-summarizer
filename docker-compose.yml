@@ -18,6 +18,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?err}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?err}
       RDB_DSN: ${RDB_DSN:?err}
+      CORS_WHITE_LIST: http://localhost:5173
 
     volumes:
       - .:/app

@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/core"
+	"github.com/caarlos0/env/v10"
 	"github.com/go-playground/validator/v10"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
 
 type CognitoService interface {
@@ -22,11 +24,13 @@ type CognitoService interface {
 
 type AuthHandler struct {
 	CognitoService CognitoService
+	CORSWhiteList  []string
 }
 
-func NewAuthHandler(cognitoService CognitoService) *AuthHandler {
+func NewAuthHandler(cognitoService CognitoService, corsWhiteList []string) *AuthHandler {
 	return &AuthHandler{
 		CognitoService: cognitoService,
+		CORSWhiteList:  corsWhiteList,
 	}
 }
 
@@ -85,29 +89,57 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	authTokenCookie := &http.Cookie{
 		Name:     "authToken",
 		Value:    session.IdToken,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-		Secure:   true,
+		MaxAge:   1000 * 60 * 60 * 24 * 7,
+		HttpOnly: false,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	}
 
-	return events.APIGatewayProxyResponse{
-		IsBase64Encoded: false,
-		StatusCode:      200,
-		Body:            string(b),
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Set-Cookie":   authTokenCookie.String(),
-		},
-	}, nil
+	responseWriter := core.NewProxyResponseWriter()
+	responseWriter.WriteHeader(http.StatusOK)
+	if err := middleware.SetHeaderForCORS(httpRequest, responseWriter, a.CORSWhiteList); err != nil {
+		fmt.Printf("Error setting header for CORS: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+	}
+	// for Preflight request
+	if req.HTTPMethod == http.MethodOptions {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+		}, nil
+	}
+	responseWriter.Header().Set("Set-Cookie", authTokenCookie.String())
+	responseWriter.Write(b)
+
+	response, err := responseWriter.GetProxyResponse()
+	if err != nil {
+		fmt.Printf("Error getting proxy response: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+
+	}
+
+	return response, nil
+}
+
+type Config struct {
+	config.CognitoConfig
+	CorsWhiteList string `env:"CORS_WHITE_LIST,required"`
 }
 
 func main() {
-	config, err := config.NewCognitoConfig()
-	if err != nil {
-		fmt.Printf("Error creating config: %v", err)
+	var config Config
+	if err := env.Parse(&config); err != nil {
+		fmt.Printf("Error parsing config: %v", err)
 		panic(err)
 	}
+
+	corsWhiteList := strings.Split(config.CorsWhiteList, ",")
 
 	cognitoService, err := adapter.NewCognitoService(context.Background(), config.CognitoClientID, config.CognitoUserPoolID)
 	if err != nil {
@@ -115,7 +147,7 @@ func main() {
 		panic(err)
 	}
 
-	handler := NewAuthHandler(cognitoService)
+	handler := NewAuthHandler(cognitoService, corsWhiteList)
 
 	lambda.Start(handler.Handle)
 }

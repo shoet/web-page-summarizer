@@ -52,7 +52,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())
 	}
 
-	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler)
+	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList())
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
 	}

@@ -25,6 +25,7 @@ type ServerDependencies struct {
 	GetSummaryUsecase     *get_summary.Usecase
 	RequestSummaryUsecase *request_task.Usecase
 	ListTaskUsecase       *list_task.Usecase
+	CORSWhiteList         []string
 }
 
 func NewServerDependencies(
@@ -32,6 +33,7 @@ func NewServerDependencies(
 	queueClient *adapter.QueueClient,
 	ddbClient *dynamodb.Client,
 	rdbHandler *infrastracture.DBHandler,
+	corsWhiteList []string,
 ) (*ServerDependencies, error) {
 
 	summaryRepository := repository.NewSummaryRepository(ddbClient)
@@ -46,6 +48,7 @@ func NewServerDependencies(
 		GetSummaryUsecase:     getSummaryUsecase,
 		RequestSummaryUsecase: requestTaskUsecase,
 		ListTaskUsecase:       listTaskUsecase,
+		CORSWhiteList:         corsWhiteList,
 	}, nil
 }
 
@@ -54,7 +57,7 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 
 	server.Logger.SetLevel(log.INFO)
 	server.Use(echoMiddleware.Logger())
-	server.Use(middleware.SetHeaderMiddleware)
+	server.Use(middleware.NewSetHeaderMiddleware(dep.CORSWhiteList).Handle)
 
 	hch := handler.NewHealthCheckHandler()
 	server.GET("/health", hch.Handler)

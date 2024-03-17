@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/caarlos0/env/v10"
 )
@@ -13,6 +14,12 @@ type Config struct {
 	OpenAIApiKey        string `env:"OPENAI_API_KEY"`
 	ExecTimeout         int    `env:"EXEC_TIMEOUT_SEC" envDefault:"300"`
 	BrowserDownloadPath string `env:"BROWSER_DOWNLOAD_PATH" envDefault:"/tmp/playwright/browser"`
+	CORSWhiteList       string `env:"CORS_WHITE_LIST"`
+}
+
+func (c *Config) GetCORSWhiteList() []string {
+	whiteList := strings.Split(c.CORSWhiteList, ",")
+	return whiteList
 }
 
 type RDBConfig struct {
