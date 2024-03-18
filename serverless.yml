@@ -66,7 +66,7 @@ functions:
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
       CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
-  session:
+  Session:
     handler: functions/session/main.go
     role: CognitoAuthHandlerRole
     package:
@@ -76,9 +76,19 @@ functions:
           path: /auth/me
           method: GET
           authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+            name: CookieAuthorizerFunction
+            identitySource: method.request.header.Cookie
+            type: request
+    environment:
+      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+
+  CookieAuthorizerFunction:
+    handler: functions/cookie_authorizer/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/cookie_authorizer.zip
     environment:
       COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
       COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
@@ -169,16 +179,6 @@ resources:
         Tags:
           - Key: Name
             Value: web_page_summary
-
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: WebPageSummarizerCognitoAuthorizer
-        IdentitySource: method.request.header.Authorization
-        RestApiId: !Ref ApiGatewayRestApi
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - !GetAtt CognitoUserPool.Arn
 
     CognitoIdentityPool:
       Type: AWS::Cognito::IdentityPool
