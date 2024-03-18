@@ -9,70 +9,126 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/core"
+	"github.com/caarlos0/env/v10"
+	"github.com/shoet/webpagesummary/pkg/config"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	claimsPtr, ok := request.RequestContext.Authorizer["claims"]
-	if !ok {
-		fmt.Println("claims not found")
-		return events.APIGatewayProxyResponse{
-			StatusCode:      http.StatusInternalServerError,
-			Body:            "InternalServer Error",
-			IsBase64Encoded: false,
-		}, nil
+type CognitoService interface {
+	GetUserInfo(ctx context.Context, accessToken string) (*entities.User, error)
+}
 
-	}
-	claims, ok := claimsPtr.(map[string]interface{})
-	if !ok {
-		fmt.Println("claims not a map")
-		return events.APIGatewayProxyResponse{
-			StatusCode:      http.StatusInternalServerError,
-			Body:            "InternalServer Error",
-			IsBase64Encoded: false,
-		}, nil
+type SessionHandler struct {
+	CognitoService CognitoService
+	CORSWhiteList  []string
+}
 
+func NewSessionHandler(cognitoService CognitoService, corsWhiteList []string) *SessionHandler {
+	return &SessionHandler{
+		CognitoService: cognitoService,
+		CORSWhiteList:  corsWhiteList,
 	}
-	email, ok := claims["email"].(string)
-	if !ok {
-		fmt.Println("email not found")
-		return events.APIGatewayProxyResponse{
-			StatusCode:      http.StatusInternalServerError,
-			Body:            "InternalServer Error",
-			IsBase64Encoded: false,
-		}, nil
+}
 
-	}
-	username, ok := claims["name"].(string)
-	if !ok {
-		fmt.Println("name not found")
+func (s *SessionHandler) Handle(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	convertor := core.RequestAccessor{}
+	httpRequest, err := convertor.EventToRequest(request)
+	if err != nil {
+		fmt.Printf("Error converting request: %v", err)
 		return events.APIGatewayProxyResponse{
-			StatusCode:      http.StatusInternalServerError,
-			Body:            "InternalServer Error",
-			IsBase64Encoded: false,
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
 		}, nil
 	}
+
+	accessTokenCookie, err := httpRequest.Cookie("accessToken")
+	if err != nil {
+		fmt.Printf("Error getting cookie: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+	}
+
+	userInfo, err := s.CognitoService.GetUserInfo(ctx, accessTokenCookie.Value)
+	if err != nil {
+		fmt.Printf("Error getting user info: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+	}
+
 	var responseBody = struct {
 		Email    string `json:"email"`
 		Username string `json:"username"`
 	}{
-		Email:    email,
-		Username: username,
+		Email:    userInfo.Email,
+		Username: userInfo.Username,
 	}
-	stringBuf := new(strings.Builder)
-	if err := json.NewEncoder(stringBuf).Encode(responseBody); err != nil {
+
+	responseWriter := core.NewProxyResponseWriter()
+	responseWriter.WriteHeader(http.StatusOK)
+	if err := middleware.SetHeaderForCORS(httpRequest, responseWriter, s.CORSWhiteList); err != nil {
+		fmt.Printf("Error setting header for CORS: %v", err)
 		return events.APIGatewayProxyResponse{
-			StatusCode:      http.StatusInternalServerError,
-			Body:            "InternalServer Error",
-			IsBase64Encoded: false,
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
 		}, nil
 	}
-	return events.APIGatewayProxyResponse{
-		StatusCode:      http.StatusOK,
-		IsBase64Encoded: false,
-		Body:            stringBuf.String(),
-	}, nil
+
+	// for Preflight request
+	if request.HTTPMethod == http.MethodOptions {
+		response, err := responseWriter.GetProxyResponse()
+		if err != nil {
+			fmt.Printf("Error getting proxy response: %v", err)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       "InternalServerError",
+			}, nil
+
+		}
+		return response, nil
+	}
+
+	if err := json.NewEncoder(responseWriter).Encode(responseBody); err != nil {
+		fmt.Printf("Error encoding response: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+	}
+
+	response, err := responseWriter.GetProxyResponse()
+	if err != nil {
+		fmt.Printf("Error getting proxy response: %v", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "InternalServerError",
+		}, nil
+
+	}
+	return response, nil
+}
+
+type Config struct {
+	CognitoConfig config.CognitoConfig
+	CORSWhiteList string `env:"CORS_WHITE_LIST,required"`
 }
 
 func main() {
-	lambda.Start(handler)
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		panic(fmt.Sprintf("failed to parse env: %v", err))
+	}
+	cognito, err := adapter.NewCognitoService(context.Background(), cfg.CognitoConfig.CognitoClientID, cfg.CognitoConfig.CognitoUserPoolID)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create cognito service: %v", err))
+	}
+	corsWhiteList := strings.Split(cfg.CORSWhiteList, ",")
+	handler := NewSessionHandler(cognito, corsWhiteList)
+	lambda.Start(handler.Handle)
 }

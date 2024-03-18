@@ -63,10 +63,25 @@ func (c *CognitoService) GetUserInfo(ctx context.Context, accessToken string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
-	fmt.Println(output)
+
+	var email, username string
+	for _, attr := range output.UserAttributes {
+		if *attr.Name == "email" {
+			email = *attr.Value
+		}
+		if *attr.Name == "name" {
+			username = *attr.Value
+		}
+	}
+	if email == "" {
+		return nil, fmt.Errorf("email is empty")
+	}
+	if username == "" {
+		return nil, fmt.Errorf("username is empty")
+	}
 	return &entities.User{
-		Email:    "test",
-		Username: "test",
+		Email:    email,
+		Username: username,
 	}, nil
 }
 

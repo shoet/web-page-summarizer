@@ -83,6 +83,7 @@ functions:
       COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
       COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
   CookieAuthorizerFunction:
     handler: functions/cookie_authorizer/main.go
