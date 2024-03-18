@@ -86,16 +86,6 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 		}, nil
 	}
 
-	authTokenCookie := &http.Cookie{
-		Name:     "authToken",
-		Value:    session.IdToken,
-		MaxAge:   1000 * 60 * 60 * 24 * 7,
-		HttpOnly: false,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	}
-
 	responseWriter := core.NewProxyResponseWriter()
 	responseWriter.WriteHeader(http.StatusOK)
 	if err := middleware.SetHeaderForCORS(httpRequest, responseWriter, a.CORSWhiteList); err != nil {
@@ -111,7 +101,18 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 			StatusCode: http.StatusOK,
 		}, nil
 	}
-	responseWriter.Header().Set("Set-Cookie", authTokenCookie.String())
+
+	cookies := make(map[string]string)
+	cookies["idToken"] = session.IdToken
+	cookies["accessToken"] = session.AccessToken
+	baseCookie := http.Cookie{
+		MaxAge:   1000 * 60 * 60 * 24 * 7,
+		HttpOnly: false,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	}
+	SetCookies(responseWriter, cookies, baseCookie)
 	responseWriter.Write(b)
 
 	response, err := responseWriter.GetProxyResponse()
@@ -125,6 +126,16 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	}
 
 	return response, nil
+}
+
+func SetCookies(w http.ResponseWriter, cookies map[string]string, baseCookie http.Cookie) {
+	for k, v := range cookies {
+		cookie := baseCookie
+		cookie.Name = k
+		cookie.Value = v
+		http.SetCookie(w, &cookie)
+	}
+	return
 }
 
 type Config struct {
