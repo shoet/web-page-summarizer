@@ -3,15 +3,30 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/caarlos0/env/v10"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
-func Handler(
+type CognitoService interface {
+	VeryfyToken(ctx context.Context, accessToken string) error
+}
+
+type AuthroizerHandler struct {
+	CognitoService CognitoService
+}
+
+func NewAuthorizerHandler(cognitoService CognitoService) *AuthroizerHandler {
+	return &AuthroizerHandler{
+		CognitoService: cognitoService,
+	}
+}
+
+func (a *AuthroizerHandler) Handle(
 	ctx context.Context,
 	req events.APIGatewayCustomAuthorizerRequestTypeRequest,
 ) (events.APIGatewayCustomAuthorizerResponse, error) {
@@ -21,8 +36,12 @@ func Handler(
 		return events.APIGatewayCustomAuthorizerResponse{}, nil
 	}
 
-	cookie := req.Headers["Cookie"]
-	cookieMap := ParseCookie(cookie)
+	cookie, ok := req.Headers["Cookie"]
+	if !ok {
+		fmt.Println("cookie not found")
+		return events.APIGatewayCustomAuthorizerResponse{}, nil
+	}
+	cookieMap := util.CookieString(cookie).ToMap()
 
 	accessToken, ok := cookieMap["accessToken"]
 	if !ok {
@@ -53,17 +72,19 @@ func Handler(
 	}, nil
 }
 
-func main() {
-	lambda.Start(Handler)
+type Config struct {
+	CognitoConfig config.CognitoConfig
 }
 
-func ParseCookie(cookie string) map[string]string {
-	cookieMap := make(map[string]string)
-	cookieList := strings.Split(cookie, ";")
-	for _, c := range cookieList {
-		cookie := strings.Split(c, "=")
-		cookieMap[cookie[0]] = cookie[1]
-		fmt.Println(cookie[0], cookie[1])
+func main() {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		panic(fmt.Sprintf("failed to parse env: %v", err))
 	}
-	return cookieMap
+	cognito, err := adapter.NewCognitoService(context.Background(), cfg.CognitoConfig.CognitoClientID, cfg.CognitoConfig.CognitoUserPoolID)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create cognito service: %v", err))
+	}
+	handler := NewAuthorizerHandler(cognito)
+	lambda.Start(handler.Handle)
 }

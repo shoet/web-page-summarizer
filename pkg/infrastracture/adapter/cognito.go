@@ -55,3 +55,24 @@ func (c *CognitoService) Login(ctx context.Context, email, password string) (*en
 
 	return session, nil
 }
+
+func (c *CognitoService) GetUserInfo(ctx context.Context, accessToken string) (*entities.User, error) {
+	output, err := c.client.GetUser(ctx, &cognitoidentityprovider.GetUserInput{
+		AccessToken: &accessToken,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	fmt.Println(output)
+	return &entities.User{
+		Email:    "test",
+		Username: "test",
+	}, nil
+}
+
+func (c *CognitoService) VeryfyToken(ctx context.Context, accessToken string) error {
+	if _, err := c.GetUserInfo(ctx, accessToken); err != nil {
+		return fmt.Errorf("failed to verify token: %w", err)
+	}
+	return nil
+}
