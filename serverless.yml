@@ -51,6 +51,62 @@ package:
     - ./.bin/**
 
 functions:
+  AuthLogin:
+    handler: functions/auth_login/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/auth_login.zip
+    events:
+      - http:
+          path: /auth/login
+          method: POST
+    environment:
+      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
+
+  AuthLogout:
+    handler: functions/auth_logout/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/auth_logout.zip
+    events:
+      - http:
+          path: /auth/logout
+          method: POST
+    environment:
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
+
+  AuthSession:
+    handler: functions/auth_session/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/auth_session.zip
+    events:
+      - http:
+          path: /auth/me
+          method: GET
+          authorizer:
+            name: CookieAuthorizerFunction
+            identitySource: method.request.header.Cookie
+            type: request
+    environment:
+      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
+
+  CookieAuthorizerFunction:
+    handler: functions/cookie_authorizer/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/cookie_authorizer.zip
+    environment:
+      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
+
   api:
     handler: functions/api/main.go
     package:
@@ -66,6 +122,7 @@ functions:
           - taskQueue
           - QueueUrl
       RDB_DSN: ${env:RDB_DSN}
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
   stream-event:
     handler: functions/stream-event/main.go
@@ -135,6 +192,78 @@ resources:
         Tags:
           - Key: Name
             Value: web_page_summary
+
+    CognitoIdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      Properties:
+        IdentityPoolName: WebPageSummarizerCognitoIdentityPool
+        AllowUnauthenticatedIdentities: false
+        CognitoIdentityProviders:
+          - ClientId: !Ref CognitoUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: WebPageSummarizerCognitoUserPool
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+            RequireNumbers: true
+        Schema:
+          - Name: email
+            Required: true
+            AttributeDataType: String
+            Mutable: true
+          - Name: name
+            Required: true
+            AttributeDataType: String
+            Mutable: true
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: WebPageSummarizerCognitoUserPoolClient
+        UserPoolId: !Ref CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+        GenerateSecret: false
+
+    CognitoAuthHandlerRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: WebPageSummarizerCognitoAuthHandlerRole
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource: "*"
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicyCognito
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "cognito-idp:AdminInitiateAuth"
+                  Resource: !GetAtt CognitoUserPool.Arn
 
     # パラメータストアにKEY・URLを登録
     restApiKey:

@@ -19,8 +19,8 @@ import (
 	"github.com/shoet/web-page-summarizer-task/pkg/crawler"
 	"github.com/shoet/web-page-summarizer-task/pkg/task"
 	"github.com/shoet/webpagesummary/pkg/config"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/logging"
 )
@@ -46,7 +46,7 @@ func CopyBrowser() (string, error) {
 type TaskExecutor struct {
 	config            *config.Config
 	logger            *logging.Logger
-	queue             *queue.QueueClient
+	queue             *adapter.QueueClient
 	summaryRepository *repository.SummaryRepository
 }
 
@@ -56,7 +56,7 @@ func NewTaskExecutor(ctx context.Context, cfg *config.Config) (*TaskExecutor, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to load aws config: %w", err)
 	}
-	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
+	queueClient := adapter.NewQueueClient(awsCfg, cfg.QueueUrl)
 	db := dynamodb.NewFromConfig(awsCfg)
 	summaryRepository := repository.NewSummaryRepository(db)
 	return &TaskExecutor{
@@ -72,7 +72,7 @@ func (t *TaskExecutor) FetchTaskId(ctx context.Context, maxExecute int) ([]strin
 	for i := 0; i < maxExecute; i++ {
 		taskId, err := t.queue.Dequeue(ctx)
 		if err != nil {
-			if errors.Is(err, queue.ErrEmptyQueue) {
+			if errors.Is(err, adapter.ErrEmptyQueue) {
 				break
 			}
 			return nil, fmt.Errorf("failed to dequeue: %w", err)

@@ -15,9 +15,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
-	"github.com/shoet/webpagesummary/pkg/infrastracture/queue"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
-	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
+	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func ExitOnErr(err error) {
@@ -46,19 +46,34 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	ddb := dynamodb.NewFromConfig(awsCfg)
-	queueClient := queue.NewQueueClient(awsCfg, cfg.QueueUrl)
+	queueClient := adapter.NewQueueClient(awsCfg, cfg.QueueUrl)
 	rdbHandler, err := infrastracture.NewDBHandler(rdbCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())
 	}
 
-	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler)
+	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList())
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
 	}
 
 	srv, err := server.NewServer(deps)
-	srv.Use(middleware.SetHeaderMiddleware)
+	if err != nil {
+		return nil, fmt.Errorf("failed create server: %s", err.Error())
+	}
+
+	// Local環境ではAuthorizerのエンドポイントを立てる
+	if cfg.Env == "local" {
+		cognitoConfig, err := testutil.LoadCognitoConfigLocal()
+		if err != nil {
+			return nil, fmt.Errorf("failed load cognito config: %s", err.Error())
+		}
+		srv, err = server.OnLocalServer(srv, cognitoConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed set local server: %s", err.Error())
+		}
+	}
+
 	return srv, err
 }
 
