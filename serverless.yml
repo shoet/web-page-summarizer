@@ -66,6 +66,18 @@ functions:
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
       CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
+  AuthLogout:
+    handler: functions/auth_logout/main.go
+    role: CognitoAuthHandlerRole
+    package:
+      artifact: ./.bin/auth_logout.zip
+    events:
+      - http:
+          path: /auth/logout
+          method: POST
+    environment:
+      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
+
   AuthSession:
     handler: functions/auth_session/main.go
     role: CognitoAuthHandlerRole

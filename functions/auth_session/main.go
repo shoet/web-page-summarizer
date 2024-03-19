@@ -120,7 +120,6 @@ func main() {
 		panic(fmt.Sprintf("failed to create cognito service: %v", err))
 	}
 	corsWhiteList := strings.Split(cfg.CORSWhiteList, ",")
-	fmt.Println(corsWhiteList)
 	handler := NewSessionHandler(cognito, corsWhiteList)
 	lambda.Start(handler.Handle)
 }
