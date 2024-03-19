@@ -51,14 +51,14 @@ package:
     - ./.bin/**
 
 functions:
-  Auth:
-    handler: functions/auth/main.go
+  AuthLogin:
+    handler: functions/auth_login/main.go
     role: CognitoAuthHandlerRole
     package:
-      artifact: ./.bin/auth.zip
+      artifact: ./.bin/auth_login.zip
     events:
       - http:
-          path: /auth
+          path: /auth/login
           method: POST
     environment:
       COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}

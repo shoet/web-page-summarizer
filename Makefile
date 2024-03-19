@@ -20,8 +20,8 @@ build: ## build go binary to bootstrap
 	&& zip -j ./.bin/api.zip ./.bin/api/bootstrap \
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/stream-event/bootstrap functions/stream-event/main.go \
 	&& zip -j ./.bin/stream-event.zip ./.bin/stream-event/bootstrap \
-	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/auth/bootstrap functions/auth/main.go \
-	&& zip -j ./.bin/auth.zip ./.bin/auth/bootstrap \
+	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/auth_login/bootstrap functions/auth_login/main.go \
+	&& zip -j ./.bin/auth_login.zip ./.bin/auth_login/bootstrap \
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/session/bootstrap functions/session/main.go \
 	&& zip -j ./.bin/session.zip ./.bin/session/bootstrap \
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/cookie_authorizer/bootstrap functions/cookie_authorizer/main.go \

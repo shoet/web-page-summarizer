@@ -15,6 +15,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/presentation/response"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
 
@@ -40,10 +41,7 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	httpRequest, err := convertor.EventToRequest(req)
 	if err != nil {
 		fmt.Printf("Error converting request: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	var requestBody struct {
@@ -52,48 +50,33 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	}
 	if err := json.NewDecoder(httpRequest.Body).Decode(&requestBody); err != nil {
 		fmt.Printf("Error decoding request body: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
-			Body:       "BadRequest",
-		}, nil
+		return response.RespondProxyResponseBadRequest(), nil
 	}
 	defer httpRequest.Body.Close()
 
 	v := validator.New()
 	if err := v.Struct(requestBody); err != nil {
 		fmt.Printf("Error validating request body: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
-			Body:       "BadRequest",
-		}, nil
+		return response.RespondProxyResponseBadRequest(), nil
 	}
 
 	session, err := a.CognitoService.Login(ctx, requestBody.Email, requestBody.Password)
 	if err != nil {
 		fmt.Printf("Error logging in: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	b, err := json.Marshal(session)
 	if err != nil {
 		fmt.Printf("Error marshalling response: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
-			Body:       "BadRequest",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	responseWriter := core.NewProxyResponseWriter()
 	responseWriter.WriteHeader(http.StatusOK)
 	if err := middleware.SetHeaderForCORS(httpRequest, responseWriter, a.CORSWhiteList); err != nil {
 		fmt.Printf("Error setting header for CORS: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 	// for Preflight request
 	if req.HTTPMethod == http.MethodOptions {
@@ -115,17 +98,12 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	SetCookies(responseWriter, cookies, baseCookie)
 	responseWriter.Write(b)
 
-	response, err := responseWriter.GetProxyResponse()
+	proxyResponse, err := responseWriter.GetProxyResponse()
 	if err != nil {
 		fmt.Printf("Error getting proxy response: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
-
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
-
-	return response, nil
+	return proxyResponse, nil
 }
 
 func SetCookies(w http.ResponseWriter, cookies map[string]string, baseCookie http.Cookie) {

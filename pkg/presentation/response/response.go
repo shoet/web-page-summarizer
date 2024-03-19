@@ -3,8 +3,10 @@ package response
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
@@ -129,4 +131,18 @@ func FormatValidateError(err validator.ValidationErrors) []string {
 		messages = append(messages, fmt.Sprintf(formatMessage, e.Field()))
 	}
 	return messages
+}
+
+func RespondProxyResponseBadRequest() events.APIGatewayProxyResponse {
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusBadRequest,
+		Body:       "BadRequest",
+	}
+}
+
+func RespondProxyResponseInternalServerError() events.APIGatewayProxyResponse {
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusInternalServerError,
+		Body:       "InternalServerError",
+	}
 }
