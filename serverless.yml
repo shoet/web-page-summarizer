@@ -66,11 +66,11 @@ functions:
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
       CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
-  Session:
-    handler: functions/session/main.go
+  AuthSession:
+    handler: functions/auth_session/main.go
     role: CognitoAuthHandlerRole
     package:
-      artifact: ./.bin/session.zip
+      artifact: ./.bin/auth_session.zip
     events:
       - http:
           path: /auth/me

@@ -14,6 +14,7 @@ import (
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/presentation/response"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 )
 
@@ -38,28 +39,19 @@ func (s *SessionHandler) Handle(ctx context.Context, request events.APIGatewayPr
 	httpRequest, err := convertor.EventToRequest(request)
 	if err != nil {
 		fmt.Printf("Error converting request: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	accessTokenCookie, err := httpRequest.Cookie("accessToken")
 	if err != nil {
 		fmt.Printf("Error getting cookie: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	userInfo, err := s.CognitoService.GetUserInfo(ctx, accessTokenCookie.Value)
 	if err != nil {
 		fmt.Printf("Error getting user info: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	var responseBody = struct {
@@ -74,44 +66,43 @@ func (s *SessionHandler) Handle(ctx context.Context, request events.APIGatewayPr
 	responseWriter.WriteHeader(http.StatusOK)
 	if err := middleware.SetHeaderForCORS(httpRequest, responseWriter, s.CORSWhiteList); err != nil {
 		fmt.Printf("Error setting header for CORS: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
 	// for Preflight request
 	if request.HTTPMethod == http.MethodOptions {
-		response, err := responseWriter.GetProxyResponse()
+		proxyResponse, err := responseWriter.GetProxyResponse()
 		if err != nil {
 			fmt.Printf("Error getting proxy response: %v", err)
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusInternalServerError,
-				Body:       "InternalServerError",
-			}, nil
-
+			return response.RespondProxyResponseInternalServerError(), nil
 		}
-		return response, nil
+		return proxyResponse, nil
 	}
 
-	if err := json.NewEncoder(responseWriter).Encode(responseBody); err != nil {
-		fmt.Printf("Error encoding response: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
+	b, err := json.Marshal(responseBody)
+	if err != nil {
+		fmt.Printf("Error marshalling response: %v", err)
+		return response.RespondProxyResponseBadRequest(), nil
+	}
+	if _, err := responseWriter.Write(b); err != nil {
+		fmt.Printf("Error writing response: %v", err)
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
-	response, err := responseWriter.GetProxyResponse()
+	// if err := json.NewEncoder(responseWriter).Encode(responseBody); err != nil {
+	// 	fmt.Printf("Error encoding response: %v", err)
+	// 	return events.APIGatewayProxyResponse{
+	// 		StatusCode: http.StatusInternalServerError,
+	// 		Body:       "InternalServerError",
+	// 	}, nil
+	// }
+
+	proxyResponse, err := responseWriter.GetProxyResponse()
 	if err != nil {
 		fmt.Printf("Error getting proxy response: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       "InternalServerError",
-		}, nil
-
+		return response.RespondProxyResponseInternalServerError(), nil
 	}
-	return response, nil
+	return proxyResponse, nil
 }
 
 type Config struct {
@@ -129,6 +120,7 @@ func main() {
 		panic(fmt.Sprintf("failed to create cognito service: %v", err))
 	}
 	corsWhiteList := strings.Split(cfg.CORSWhiteList, ",")
+	fmt.Println(corsWhiteList)
 	handler := NewSessionHandler(cognito, corsWhiteList)
 	lambda.Start(handler.Handle)
 }
