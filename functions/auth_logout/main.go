@@ -60,7 +60,7 @@ func ClearCookie(w http.ResponseWriter, key string) {
 	cookie := &http.Cookie{
 		Name:     key,
 		Value:    "",
-		HttpOnly: false,
+		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,

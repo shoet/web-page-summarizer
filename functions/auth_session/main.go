@@ -89,14 +89,6 @@ func (s *SessionHandler) Handle(ctx context.Context, request events.APIGatewayPr
 		return response.RespondProxyResponseInternalServerError(), nil
 	}
 
-	// if err := json.NewEncoder(responseWriter).Encode(responseBody); err != nil {
-	// 	fmt.Printf("Error encoding response: %v", err)
-	// 	return events.APIGatewayProxyResponse{
-	// 		StatusCode: http.StatusInternalServerError,
-	// 		Body:       "InternalServerError",
-	// 	}, nil
-	// }
-
 	proxyResponse, err := responseWriter.GetProxyResponse()
 	if err != nil {
 		fmt.Printf("Error getting proxy response: %v", err)

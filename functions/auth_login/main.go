@@ -90,7 +90,7 @@ func (a *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	cookies["accessToken"] = session.AccessToken
 	baseCookie := http.Cookie{
 		MaxAge:   1000 * 60 * 60 * 24 * 7,
-		HttpOnly: false,
+		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",

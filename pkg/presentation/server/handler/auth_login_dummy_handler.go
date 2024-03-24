@@ -52,7 +52,7 @@ func (a *AuthLoginHandler) Handler(ctx echo.Context) error {
 		Name:     "authToken",
 		Value:    session.IdToken,
 		MaxAge:   1000 * 60 * 60 * 24 * 7,
-		HttpOnly: false,
+		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
