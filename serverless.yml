@@ -233,6 +233,30 @@ resources:
           - ADMIN_NO_SRP_AUTH
         GenerateSecret: false
 
+    CognitoIdPoolRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: WebPageSummarizerCognitoIdPoolRole
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: "cognito-identity.amazonaws.com"
+              Action: "sts:AssumeRoleWithWebIdentity"
+              Condition:
+                StringEquals:
+                  "cognito-identity.amazonaws.com:aud": !Ref CognitoIdentityPool
+                "ForAnyValue:StringLike":
+                  "cognito-identity.amazonaws.com:amr": "authenticated"
+
+    CognitoIdPoolRoleAttachment:
+      Type: AWS::Cognito::IdentityPoolRoleAttachment
+      Properties:
+        IdentityPoolId: !Ref CognitoIdentityPool
+        Roles:
+          authenticated: !GetAtt CognitoIdPoolRole.Arn
+
     CognitoAuthHandlerRole:
       Type: AWS::IAM::Role
       Properties:
