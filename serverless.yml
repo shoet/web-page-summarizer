@@ -116,6 +116,7 @@ functions:
       - http:
           path: /{proxy+}
           method: any
+          cors: true
     environment:
       QUEUE_URL:
         Fn::GetAtt:
