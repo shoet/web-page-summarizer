@@ -14,6 +14,12 @@ provider:
     apiKeys:
       - ApiKey
 
+  httpApi:
+    authorizers:
+      CustomCognitoAuthorizer:
+        type: request
+        functionName: CustomCognitoAuthorizerFunction
+
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -107,6 +113,11 @@ functions:
       COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
       COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
 
+  CustomCognitoAuthorizerFunction:
+    handler: functions/custom_cognito_authorizer/main.go
+    package:
+      artifact: ./.bin/custom_cognito_authorizer.zip
+
   api:
     handler: functions/api/main.go
     package:
@@ -117,6 +128,9 @@ functions:
           path: /{proxy+}
           method: any
           cors: true
+          authorizer:
+            name: CustomCognitoAuthorizerFunction
+            type: request
     environment:
       QUEUE_URL:
         Fn::GetAtt:
