@@ -14,12 +14,6 @@ provider:
     apiKeys:
       - ApiKey
 
-  httpApi:
-    authorizers:
-      CustomCognitoAuthorizer:
-        type: request
-        functionName: CustomCognitoAuthorizerFunction
-
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -117,6 +111,11 @@ functions:
     handler: functions/custom_cognito_authorizer/main.go
     package:
       artifact: ./.bin/custom_cognito_authorizer.zip
+    environment:
+      COGNITO_USER_POOL_ID: ${ssm:/web-page-summarizer/COGNITO_USER_POOL_ID}
+      COGNITO_CLIENT_ID: ${ssm:/web-page-summarizer/COGNITO_CLIENT_ID}
+      COGNITO_ID_POOL_ID: ${ssm:/web-page-summarizer/COGNITO_ID_POOL_ID}
+      COGNITO_JWK_URL: ${ssm:/web-page-summarizer/COGNITO_JWK_URL}
 
   api:
     handler: functions/api/main.go

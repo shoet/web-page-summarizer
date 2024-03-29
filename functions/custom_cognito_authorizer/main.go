@@ -3,13 +3,31 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/caarlos0/env/v10"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
+type Config struct {
+	CognitoJWKUrl string `env:"COGNITO_JWK_URL,required"`
+}
+
 func Handle(ctx context.Context, req events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
-	fmt.Println("Request", req)
+	var config Config
+	if err := env.Parse(&config); err != nil {
+		return events.APIGatewayCustomAuthorizerResponse{}, fmt.Errorf("failed to parse config: %w", err)
+	}
+	authorization, ok := req.Headers["Authorization"]
+	if !ok {
+		return events.APIGatewayCustomAuthorizerResponse{}, fmt.Errorf("Authorization header not found")
+	}
+	accessToken := strings.Replace(authorization, "Bearer ", "", 1)
+	if _, err := util.VerifyToken(ctx, config.CognitoJWKUrl, accessToken); err != nil {
+		return events.APIGatewayCustomAuthorizerResponse{}, fmt.Errorf("failed to verify token: %w", err)
+	}
 	return events.APIGatewayCustomAuthorizerResponse{
 		PrincipalID: "user",
 		PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
