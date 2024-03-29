@@ -27,7 +27,9 @@ build: ## build go binary to bootstrap
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/auth_session/bootstrap functions/auth_session/main.go \
 	&& zip -j ./.bin/auth_session.zip ./.bin/auth_session/bootstrap \
 	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/cookie_authorizer/bootstrap functions/cookie_authorizer/main.go \
-	&& zip -j ./.bin/cookie_authorizer.zip ./.bin/cookie_authorizer/bootstrap
+	&& zip -j ./.bin/cookie_authorizer.zip ./.bin/cookie_authorizer/bootstrap \
+	&& env GOARCH=amd64 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./.bin/custom_cognito_authorizer/bootstrap functions/custom_cognito_authorizer/main.go \
+	&& zip -j ./.bin/custom_cognito_authorizer.zip ./.bin/custom_cognito_authorizer/bootstrap
 
 .PHONY: clean
 clean: ## Clean Lambda functions binary
