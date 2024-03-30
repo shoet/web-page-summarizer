@@ -18,6 +18,7 @@ type Config struct {
 	CognitoJWKUrl          string `env:"COGNITO_JWK_URL"`
 	RequestRateLimitMax    int    `env:"REQUEST_RATE_LIMIT_MAX" envDefault:"10"`
 	RequestRateLimitTTLSec int    `env:"REQUEST_RATE_LIMIT_TTL_SEC" envDefault:"86400"`
+	APIKey                 string `env:"API_KEY"`
 }
 
 func (c *Config) GetCORSWhiteList() []string {

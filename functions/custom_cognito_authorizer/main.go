@@ -52,10 +52,8 @@ func (c *CustomCognitoAuthorizerHandler) Handle(
 ) (events.APIGatewayCustomAuthorizerResponse, error) {
 	apiKey, ok := req.Headers["x-api-key"]
 	if ok && apiKey == c.ApiKey {
-		fmt.Printf("api key is valid\n")
 		return allowResponse, nil
 	}
-
 	authorization, ok := req.Headers["Authorization"]
 	if !ok {
 		fmt.Printf("authorization header not found\n")
@@ -66,8 +64,6 @@ func (c *CustomCognitoAuthorizerHandler) Handle(
 		fmt.Printf("failed to verify token: %s\n", err)
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")
 	}
-	fmt.Printf("token is valid\n")
-	fmt.Printf("token: %s\n", accessToken)
 	return allowResponse, nil
 }
 

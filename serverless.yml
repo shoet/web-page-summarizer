@@ -131,7 +131,6 @@ functions:
           authorizer:
             name: CustomCognitoAuthorizerFunction
             type: request
-
     environment:
       ENV: prod
       QUEUE_URL:
@@ -143,6 +142,7 @@ functions:
       COGNITO_JWK_URL: ${ssm:/web-page-summarizer/COGNITO_JWK_URL}
       REQUEST_RATE_LIMIT_MAX: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_MAX}
       REQUEST_RATE_LIMIT_TTL_SEC: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_TTL_SEC}
+      API_KEY: ${ssm:/web-page-summarizer/API_KEY}
 
   stream-event:
     handler: functions/stream-event/main.go
