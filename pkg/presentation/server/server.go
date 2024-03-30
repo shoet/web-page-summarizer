@@ -21,11 +21,12 @@ import (
 )
 
 type ServerDependencies struct {
-	Validator             *validator.Validate
-	GetSummaryUsecase     *get_summary.Usecase
-	RequestSummaryUsecase *request_task.Usecase
-	ListTaskUsecase       *list_task.Usecase
-	CORSWhiteList         []string
+	Validator              *validator.Validate
+	GetSummaryUsecase      *get_summary.Usecase
+	RequestSummaryUsecase  *request_task.Usecase
+	ListTaskUsecase        *list_task.Usecase
+	CORSWhiteList          []string
+	RateLimitterMiddleware *middleware.AuthRateLimitMiddleware
 }
 
 func NewServerDependencies(
@@ -34,6 +35,7 @@ func NewServerDependencies(
 	ddbClient *dynamodb.Client,
 	rdbHandler *infrastracture.DBHandler,
 	corsWhiteList []string,
+	rateLimitterMiddleware *middleware.AuthRateLimitMiddleware,
 ) (*ServerDependencies, error) {
 
 	summaryRepository := repository.NewSummaryRepository(ddbClient)
@@ -44,11 +46,12 @@ func NewServerDependencies(
 	listTaskUsecase := list_task.NewUsecase(rdbHandler, taskRepository)
 
 	return &ServerDependencies{
-		Validator:             validator,
-		GetSummaryUsecase:     getSummaryUsecase,
-		RequestSummaryUsecase: requestTaskUsecase,
-		ListTaskUsecase:       listTaskUsecase,
-		CORSWhiteList:         corsWhiteList,
+		Validator:              validator,
+		GetSummaryUsecase:      getSummaryUsecase,
+		RequestSummaryUsecase:  requestTaskUsecase,
+		ListTaskUsecase:        listTaskUsecase,
+		CORSWhiteList:          corsWhiteList,
+		RateLimitterMiddleware: rateLimitterMiddleware,
 	}, nil
 }
 
@@ -66,7 +69,7 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server.POST("/get-summary", gsh.Handler)
 
 	sth := handler.NewSummaryTaskHandler(dep.Validator, dep.RequestSummaryUsecase)
-	server.POST("/task", sth.Handler)
+	server.POST("/task", dep.RateLimitterMiddleware.Handle(sth.Handler))
 
 	lth := handler.NewListTaskHandler(dep.ListTaskUsecase)
 	server.GET("/task", lth.Handler)

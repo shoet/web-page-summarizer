@@ -131,12 +131,16 @@ functions:
             name: CustomCognitoAuthorizerFunction
             type: request
     environment:
+      ENV: prod
       QUEUE_URL:
         Fn::GetAtt:
           - taskQueue
           - QueueUrl
       RDB_DSN: ${env:RDB_DSN}
       CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
+      COGNITO_JWK_URL: ${ssm:/web-page-summarizer/COGNITO_JWK_URL}
+      REQUEST_RATE_LIMIT_MAX: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_MAX}
+      REQUEST_RATE_LIMIT_TTL_SEC: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_TTL_SEC}
 
   stream-event:
     handler: functions/stream-event/main.go
@@ -196,6 +200,21 @@ resources:
         BillingMode: PAY_PER_REQUEST
         StreamSpecification:
           StreamViewType: NEW_IMAGE
+
+    RequestRateLimit:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: request_rate_limit
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
 
     taskQueue:
       Type: AWS::SQS::Queue
