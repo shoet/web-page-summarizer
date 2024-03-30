@@ -7,12 +7,26 @@ useDotenv: true
 provider:
   name: aws
   runtime: provided.al2
-  stage: dev
+  stage: prod
   region: ap-northeast-1
 
-  apiGateway:
-    apiKeys:
-      - ApiKey
+  environment:
+    ENV: ${self:provider.stage}
+    QUEUE_URL:
+      Fn::GetAtt:
+        - taskQueue
+        - QueueUrl
+    BROWSER_PATH: ${ssm:/web-page-summarizer/${self:provider.stage}/BROWSER_PATH}
+    OPENAI_API_KEY: ${ssm:/web-page-summarizer/${self:provider.stage}/OPENAI_API_KEY}
+    CORS_WHITE_LIST: ${ssm:/web-page-summarizer/${self:provider.stage}/CORS_WHITE_LIST}
+    COGNITO_JWK_URL: ${ssm:/web-page-summarizer/${self:provider.stage}/COGNITO_JWK_URL}
+    COGNITO_USER_POOL_ID: ${ssm:/web-page-summarizer/${self:provider.stage}/COGNITO_USER_POOL_ID}
+    COGNITO_CLIENT_ID: ${ssm:/web-page-summarizer/${self:provider.stage}/COGNITO_CLIENT_ID}
+    COGNITO_ID_POOL_ID: ${ssm:/web-page-summarizer/${self:provider.stage}/COGNITO_ID_POOL_ID}
+    REQUEST_RATE_LIMIT_MAX: ${ssm:/web-page-summarizer/${self:provider.stage}/REQUEST_RATE_LIMIT_MAX}
+    REQUEST_RATE_LIMIT_TTL_SEC: ${ssm:/web-page-summarizer/${self:provider.stage}/REQUEST_RATE_LIMIT_TTL_SEC}
+    API_KEY: ${ssm:/web-page-summarizer/${self:provider.stage}/API_KEY}
+    RDB_DSN: ${ssm:/web-page-summarizer/${self:provider.stage}/RDB_DSN}
 
   iamRoleStatements:
     - Effect: Allow
@@ -39,6 +53,7 @@ provider:
   ecr:
     images:
       summaryPageContainerImage:
+        name: ${self:service}-${self:provider.stage}-summary-page-image
         path: .
         platform: linux/amd64
         file: ./summarytask/Dockerfile
@@ -52,6 +67,7 @@ package:
 
 functions:
   AuthLogin:
+    name: ${self:service}-${self:provider.stage}-auth-login
     handler: functions/auth_login/main.go
     role: CognitoAuthHandlerRole
     package:
@@ -60,13 +76,9 @@ functions:
       - http:
           path: /auth/login
           method: POST
-    environment:
-      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
-      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
-      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
-      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
   AuthLogout:
+    name: ${self:service}-${self:provider.stage}-auth-logout
     handler: functions/auth_logout/main.go
     role: CognitoAuthHandlerRole
     package:
@@ -76,9 +88,11 @@ functions:
           path: /auth/logout
           method: POST
     environment:
+      ENV: ${self:provider.stage}
       CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
   AuthSession:
+    name: ${self:service}-${self:provider.stage}-auth-session
     handler: functions/auth_session/main.go
     role: CognitoAuthHandlerRole
     package:
@@ -91,34 +105,22 @@ functions:
             name: CookieAuthorizerFunction
             identitySource: method.request.header.Cookie
             type: request
-    environment:
-      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
-      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
-      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
-      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
 
   CookieAuthorizerFunction:
+    name: ${self:service}-${self:provider.stage}-cookie-authorizer
     handler: functions/cookie_authorizer/main.go
     role: CognitoAuthHandlerRole
     package:
       artifact: ./.bin/cookie_authorizer.zip
-    environment:
-      COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
-      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
-      COGNITO_ID_POOL_ID: ${env:COGNITO_ID_POOL_ID}
 
   CustomCognitoAuthorizerFunction:
+    name: ${self:service}-${self:provider.stage}-custom-cognito-authorizer
     handler: functions/custom_cognito_authorizer/main.go
     package:
       artifact: ./.bin/custom_cognito_authorizer.zip
-    environment:
-      COGNITO_USER_POOL_ID: ${ssm:/web-page-summarizer/COGNITO_USER_POOL_ID}
-      COGNITO_CLIENT_ID: ${ssm:/web-page-summarizer/COGNITO_CLIENT_ID}
-      COGNITO_ID_POOL_ID: ${ssm:/web-page-summarizer/COGNITO_ID_POOL_ID}
-      COGNITO_JWK_URL: ${ssm:/web-page-summarizer/COGNITO_JWK_URL}
-      API_KEY: ${ssm:/web-page-summarizer/API_KEY}
 
   api:
+    name: ${self:service}-${self:provider.stage}-api
     handler: functions/api/main.go
     package:
       individually: true
@@ -131,20 +133,9 @@ functions:
           authorizer:
             name: CustomCognitoAuthorizerFunction
             type: request
-    environment:
-      ENV: prod
-      QUEUE_URL:
-        Fn::GetAtt:
-          - taskQueue
-          - QueueUrl
-      RDB_DSN: ${env:RDB_DSN}
-      CORS_WHITE_LIST: ${env:CORS_WHITE_LIST}
-      COGNITO_JWK_URL: ${ssm:/web-page-summarizer/COGNITO_JWK_URL}
-      REQUEST_RATE_LIMIT_MAX: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_MAX}
-      REQUEST_RATE_LIMIT_TTL_SEC: ${ssm:/web-page-summarizer/REQUEST_RATE_LIMIT_TTL_SEC}
-      API_KEY: ${ssm:/web-page-summarizer/API_KEY}
 
   stream-event:
+    name: ${self:service}-${self:provider.stage}-stream-event
     handler: functions/stream-event/main.go
     package:
       individually: true
@@ -154,19 +145,12 @@ functions:
           type: dynamodb
           arn:
             Fn::GetAtt: [summaryTable, StreamArn]
-    environment:
-      RDB_DSN: ${env:RDB_DSN}
 
   summary-page:
+    name: ${self:service}-${self:provider.stage}-summary-page
     image:
       name: summaryPageContainerImage
     description: summary web page
-    environment:
-      QUEUE_URL:
-        Fn::GetAtt:
-          - taskQueue
-          - QueueUrl
-      OPENAI_API_KEY: ${ssm:/web-page-summarizer/task/OPENAI_API_KEY}
     timeout: 300
     memorySize: 2048
     ephemeralStorageSize: 1024
@@ -183,7 +167,7 @@ resources:
     summaryTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: web_page_summary
+        TableName: web_page_summary_${self:provider.stage}
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -206,7 +190,7 @@ resources:
     RequestRateLimit:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: request_rate_limit
+        TableName: request_rate_limit_${self:provider.stage}
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -221,7 +205,7 @@ resources:
     taskQueue:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: web_page_summary_queue
+        QueueName: web_page_summary_queue_${self:provider.stage}
         ReceiveMessageWaitTimeSeconds: 20
         VisibilityTimeout: 1800
         Tags:
@@ -231,7 +215,7 @@ resources:
     CognitoIdentityPool:
       Type: AWS::Cognito::IdentityPool
       Properties:
-        IdentityPoolName: WebPageSummarizerCognitoIdentityPool
+        IdentityPoolName: WebPageSummarizerCognitoIdentityPool${self:provider.stage}
         AllowUnauthenticatedIdentities: false
         CognitoIdentityProviders:
           - ClientId: !Ref CognitoUserPoolClient
@@ -240,7 +224,7 @@ resources:
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: WebPageSummarizerCognitoUserPool
+        UserPoolName: WebPageSummarizerCognitoUserPool${self:provider.stage}
         UsernameAttributes:
           - email
         AutoVerifiedAttributes:
@@ -262,7 +246,7 @@ resources:
     CognitoUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
-        ClientName: WebPageSummarizerCognitoUserPoolClient
+        ClientName: WebPageSummarizerCognitoUserPoolClient${self:provider.stage}
         UserPoolId: !Ref CognitoUserPool
         ExplicitAuthFlows:
           - ADMIN_NO_SRP_AUTH
@@ -271,7 +255,7 @@ resources:
     CognitoIdPoolRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: WebPageSummarizerCognitoIdPoolRole
+        RoleName: WebPageSummarizerCognitoIdPoolRole${self:provider.stage}
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
@@ -295,7 +279,7 @@ resources:
     CognitoAuthHandlerRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: WebPageSummarizerCognitoAuthHandlerRole
+        RoleName: WebPageSummarizerCognitoAuthHandlerRole${self:provider.stage}
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
@@ -305,7 +289,7 @@ resources:
                   - lambda.amazonaws.com
               Action: sts:AssumeRole
         Policies:
-          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicy
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicy${self:provider.stage}
             PolicyDocument:
               Version: "2012-10-17"
               Statement:
@@ -315,7 +299,7 @@ resources:
                     - "logs:CreateLogStream"
                     - "logs:PutLogEvents"
                   Resource: "*"
-          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicyCognito
+          - PolicyName: WebPageSummarizerCognitoAuthHandlerPolicyCognito${self:provider.stage}
             PolicyDocument:
               Version: "2012-10-17"
               Statement:
@@ -323,18 +307,3 @@ resources:
                   Action:
                     - "cognito-idp:AdminInitiateAuth"
                   Resource: !GetAtt CognitoUserPool.Arn
-
-    # パラメータストアにKEY・URLを登録
-    restApiKey:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: /web-page-summarizer/task/API_KEY
-        Type: String
-        Value: ${env:API_KEY}
-
-    restApiUrl:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: /web-page-summarizer/task/API_URL
-        Type: String
-        Value: ${env:API_URL}
