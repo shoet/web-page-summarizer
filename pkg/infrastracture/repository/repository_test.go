@@ -24,7 +24,8 @@ type TeardownInput struct{}
 
 func SetUpTables() map[string]*dynamodb.CreateTableInput {
 	var tables = map[string]*dynamodb.CreateTableInput{
-		(&SummaryRepository{}).TableName(): CreateTableInputWebPageSummary(),
+		(&SummaryRepository{}).TableName():          CreateTableInputWebPageSummary(),
+		(&RequestRateLimitRepository{}).TableName(): CreateTableInputRequestRateLimit(),
 	}
 	return tables
 }
@@ -40,10 +41,11 @@ func MustSetup() *SetUpOutput {
 			var e *types.ResourceInUseException
 			if errors.As(err, &e) {
 				fmt.Printf("table already exists: %s\n", tableName)
-				return nil
+				continue
 			}
 			panic(fmt.Sprintf("failed create dynamodb: %s\n", err.Error()))
 		}
+		fmt.Printf("created table: %s\n", tableName)
 	}
 	return &SetUpOutput{}
 }
@@ -87,6 +89,26 @@ func CreateTableInputWebPageSummary() *dynamodb.CreateTableInput {
 				Projection: &types.Projection{
 					ProjectionType: types.ProjectionTypeAll,
 				},
+			},
+		},
+		KeySchema: []types.KeySchemaElement{
+			{
+				AttributeName: aws.String("id"),
+				KeyType:       types.KeyTypeHash,
+			},
+		},
+		BillingMode: types.BillingModePayPerRequest,
+	}
+}
+
+func CreateTableInputRequestRateLimit() *dynamodb.CreateTableInput {
+	tableName := (&RequestRateLimitRepository{}).TableName()
+	return &dynamodb.CreateTableInput{
+		TableName: &tableName,
+		AttributeDefinitions: []types.AttributeDefinition{
+			{
+				AttributeName: aws.String("id"),
+				AttributeType: types.ScalarAttributeTypeS,
 			},
 		},
 		KeySchema: []types.KeySchemaElement{
