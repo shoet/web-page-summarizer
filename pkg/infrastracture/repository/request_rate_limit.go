@@ -12,17 +12,20 @@ import (
 )
 
 type RequestRateLimitRepository struct {
-	db *dynamodb.Client
+	db  *dynamodb.Client
+	env *string
 }
 
 func (r *RequestRateLimitRepository) TableName() string {
-	return "request_rate_limit"
+	tableName := "request_rate_limit"
+	if r.env != nil {
+		return tableName + "_" + *r.env
+	}
+	return tableName
 }
 
-func NewRequestRateLimitRepository(db *dynamodb.Client) *RequestRateLimitRepository {
-	return &RequestRateLimitRepository{
-		db: db,
-	}
+func NewRequestRateLimitRepository(db *dynamodb.Client, env *string) *RequestRateLimitRepository {
+	return &RequestRateLimitRepository{db: db, env: env}
 }
 
 func (r *RequestRateLimitRepository) GetById(ctx context.Context, id string) (*entities.AuthRateLimit, error) {

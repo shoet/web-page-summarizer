@@ -93,7 +93,7 @@ func Test_RequestRateLimitRepository_GetById(t *testing.T) {
 		t.Fatalf("failed load aws config: %s\n", err.Error())
 	}
 	db := dynamodb.NewFromConfig(*testAwsCfg)
-	sut := NewRequestRateLimitRepository(db)
+	sut := NewRequestRateLimitRepository(db, nil)
 
 	for _, tt := range tests {
 		ctx := context.Background()

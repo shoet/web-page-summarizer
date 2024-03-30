@@ -8,17 +8,17 @@ import (
 )
 
 type Config struct {
-	Env                    string `env:"ENV"`
+	Env                    string `env:"ENV,required"`
 	QueueUrl               string `env:"QUEUE_URL,required"`
-	BrowserPath            string `env:"BROWSER_PATH"`
-	OpenAIApiKey           string `env:"OPENAI_API_KEY"`
+	BrowserPath            string `env:"BROWSER_PATH,required"`
+	OpenAIApiKey           string `env:"OPENAI_API_KEY,required"`
 	ExecTimeout            int    `env:"EXEC_TIMEOUT_SEC" envDefault:"300"`
 	BrowserDownloadPath    string `env:"BROWSER_DOWNLOAD_PATH" envDefault:"/tmp/playwright/browser"`
-	CORSWhiteList          string `env:"CORS_WHITE_LIST"`
-	CognitoJWKUrl          string `env:"COGNITO_JWK_URL"`
-	RequestRateLimitMax    int    `env:"REQUEST_RATE_LIMIT_MAX" envDefault:"10"`
-	RequestRateLimitTTLSec int    `env:"REQUEST_RATE_LIMIT_TTL_SEC" envDefault:"86400"`
-	APIKey                 string `env:"API_KEY"`
+	CORSWhiteList          string `env:"CORS_WHITE_LIST,required"`
+	CognitoJWKUrl          string `env:"COGNITO_JWK_URL,required"`
+	RequestRateLimitMax    int    `env:"REQUEST_RATE_LIMIT_MAX,required" envDefault:"10"`
+	RequestRateLimitTTLSec int    `env:"REQUEST_RATE_LIMIT_TTL_SEC,required" envDefault:"86400"`
+	APIKey                 string `env:"API_KEY,required"`
 }
 
 func (c *Config) GetCORSWhiteList() []string {

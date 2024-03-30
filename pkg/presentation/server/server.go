@@ -21,6 +21,7 @@ import (
 )
 
 type ServerDependencies struct {
+	Env                    *string
 	Validator              *validator.Validate
 	GetSummaryUsecase      *get_summary.Usecase
 	RequestSummaryUsecase  *request_task.Usecase
@@ -30,6 +31,7 @@ type ServerDependencies struct {
 }
 
 func NewServerDependencies(
+	env *string,
 	validator *validator.Validate,
 	queueClient *adapter.QueueClient,
 	ddbClient *dynamodb.Client,
@@ -38,7 +40,7 @@ func NewServerDependencies(
 	rateLimitterMiddleware *middleware.AuthRateLimitMiddleware,
 ) (*ServerDependencies, error) {
 
-	summaryRepository := repository.NewSummaryRepository(ddbClient)
+	summaryRepository := repository.NewSummaryRepository(ddbClient, env)
 	taskRepository := repository.NewTaskRepository()
 
 	getSummaryUsecase := get_summary.NewUsecase(summaryRepository)
