@@ -18,6 +18,9 @@ type Key struct {
 }
 
 func VerifyToken(ctx context.Context, keyUrl string, accessToken string) (tokenSub string, err error) {
+	if keyUrl == "" {
+		return "", fmt.Errorf("keyUrl is required")
+	}
 	set, err := jwk.Fetch(ctx, keyUrl)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch JWK: %v", err)

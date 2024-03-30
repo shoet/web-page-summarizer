@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -16,7 +17,9 @@ import (
 	"github.com/shoet/webpagesummary/pkg/config"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/adapter"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
+	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
 	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
@@ -52,7 +55,16 @@ func BuildEchoServer() (*echo.Echo, error) {
 		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())
 	}
 
-	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList())
+	requestRateLimitRepository := repository.NewRequestRateLimitRepository(ddb)
+	rateLimitterMiddleware := middleware.NewAuthRateLimitMiddleware(
+		cfg.Env,
+		requestRateLimitRepository,
+		cfg.RequestRateLimitMax,
+		time.Second*time.Duration(cfg.RequestRateLimitTTLSec),
+		cfg.CognitoJWKUrl,
+	)
+
+	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware)
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
 	}
