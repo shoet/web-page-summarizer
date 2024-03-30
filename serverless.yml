@@ -197,6 +197,20 @@ resources:
         StreamSpecification:
           StreamViewType: NEW_IMAGE
 
+    RequestRateLimit:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: request_rate_limit
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: id
+          Enabled: true
     taskQueue:
       Type: AWS::SQS::Queue
       Properties:
