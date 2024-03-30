@@ -58,7 +58,7 @@ func NewTaskExecutor(ctx context.Context, cfg *config.Config) (*TaskExecutor, er
 	}
 	queueClient := adapter.NewQueueClient(awsCfg, cfg.QueueUrl)
 	db := dynamodb.NewFromConfig(awsCfg)
-	summaryRepository := repository.NewSummaryRepository(db)
+	summaryRepository := repository.NewSummaryRepository(db, &cfg.Env)
 	return &TaskExecutor{
 		config:            cfg,
 		logger:            logger,

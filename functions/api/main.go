@@ -55,7 +55,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 		return nil, fmt.Errorf("failed create rdb handler: %s", err.Error())
 	}
 
-	requestRateLimitRepository := repository.NewRequestRateLimitRepository(ddb)
+	requestRateLimitRepository := repository.NewRequestRateLimitRepository(ddb, &cfg.Env)
 	rateLimitterMiddleware := middleware.NewAuthRateLimitMiddleware(
 		cfg.Env,
 		requestRateLimitRepository,
@@ -65,7 +65,9 @@ func BuildEchoServer() (*echo.Echo, error) {
 		cfg.APIKey,
 	)
 
-	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware)
+	deps, err := server.NewServerDependencies(
+		&cfg.Env, validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
 	}

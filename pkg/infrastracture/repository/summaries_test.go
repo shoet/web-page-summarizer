@@ -24,7 +24,7 @@ func Test_SummaryRepository_GetSummary(t *testing.T) {
 		t.Fatalf("failed load aws config: %s\n", err.Error())
 	}
 	db := dynamodb.NewFromConfig(*testAwsCfg)
-	sut := NewSummaryRepository(db)
+	sut := NewSummaryRepository(db, nil)
 
 	id := "test_Test_SummaryRepository_GetSummary"
 	wantSummary := &entities.Summary{
@@ -63,7 +63,7 @@ func Test_SummaryRepository_CreateSummary(t *testing.T) {
 		t.Fatalf("failed load aws config: %s\n", err.Error())
 	}
 	db := dynamodb.NewFromConfig(*testAwsCfg)
-	sut := NewSummaryRepository(db)
+	sut := NewSummaryRepository(db, nil)
 
 	argsSummary := &entities.Summary{
 		Id:        "test_Test_SummaryRepository_CreateSummary",
@@ -107,7 +107,7 @@ func Test_SummaryRepository_UpdateSummary(t *testing.T) {
 		t.Fatalf("failed load aws config: %s\n", err.Error())
 	}
 	db := dynamodb.NewFromConfig(*testAwsCfg)
-	sut := NewSummaryRepository(db)
+	sut := NewSummaryRepository(db, nil)
 
 	id := "test_Test_SummaryRepository_UpdateSummary"
 	wantStatus := "complete"
@@ -162,7 +162,7 @@ func Test_SummaryRepository_ListTask(t *testing.T) {
 		t.Fatalf("failed load aws config: %s\n", err.Error())
 	}
 	ddb := dynamodb.NewFromConfig(*testAwsCfg)
-	sut := NewSummaryRepository(ddb)
+	sut := NewSummaryRepository(ddb, nil)
 
 	cleanupFunc := func() error {
 		tableKeys := []string{"id"}

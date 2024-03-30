@@ -14,15 +14,20 @@ import (
 )
 
 type SummaryRepository struct {
-	db *dynamodb.Client
+	db  *dynamodb.Client
+	env *string
 }
 
-func NewSummaryRepository(db *dynamodb.Client) *SummaryRepository {
-	return &SummaryRepository{db: db}
+func NewSummaryRepository(db *dynamodb.Client, env *string) *SummaryRepository {
+	return &SummaryRepository{db: db, env: env}
 }
 
 func (r *SummaryRepository) TableName() string {
-	return "web_page_summary"
+	tableName := "web_page_summary"
+	if r.env != nil {
+		return tableName + "_" + *r.env
+	}
+	return tableName
 }
 
 func (r *SummaryRepository) StatusIndexName() string {
