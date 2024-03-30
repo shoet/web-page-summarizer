@@ -23,6 +23,7 @@ type AuthRateLimitMiddleware struct {
 	RequestRateLimitMax        int
 	RequestRateLimitTTL        time.Duration
 	CognitoJWKUrl              string
+	APIKey                     string
 }
 
 func NewAuthRateLimitMiddleware(
@@ -31,6 +32,7 @@ func NewAuthRateLimitMiddleware(
 	requestRateLimitMax int,
 	requestRateLimitTTL time.Duration,
 	cognitoJWKUrl string,
+	apiKey string,
 ) *AuthRateLimitMiddleware {
 	return &AuthRateLimitMiddleware{
 		Env:                        env,
@@ -38,12 +40,18 @@ func NewAuthRateLimitMiddleware(
 		RequestRateLimitMax:        requestRateLimitMax,
 		RequestRateLimitTTL:        requestRateLimitTTL,
 		CognitoJWKUrl:              cognitoJWKUrl,
+		APIKey:                     apiKey,
 	}
 }
 
 func (a *AuthRateLimitMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		if a.Env == "prod" {
+			apiKey := ctx.Request().Header.Get("x-api-key")
+			if apiKey == a.APIKey {
+				// APIKEYを持っている場合はリクエスト回数制限をかけない
+				return next(ctx)
+			}
 			authorizationHeader := ctx.Request().Header.Get("Authorization")
 			if authorizationHeader == "" {
 				return echo.NewHTTPError(401, "Authorization header is required")

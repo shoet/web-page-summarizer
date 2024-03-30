@@ -62,6 +62,7 @@ func BuildEchoServer() (*echo.Echo, error) {
 		cfg.RequestRateLimitMax,
 		time.Second*time.Duration(cfg.RequestRateLimitTTLSec),
 		cfg.CognitoJWKUrl,
+		cfg.APIKey,
 	)
 
 	deps, err := server.NewServerDependencies(validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware)
