@@ -8,15 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
 )
-
-/*
-AuthRateLimitはID単位でアクセス回数を表現する構造体
-*/
-type AuthRateLimit struct {
-	ID    string `dynamodbav:"id"`
-	Count uint   `dynamodbav:"count"`
-}
 
 type RequestRateLimitRepository struct {
 	db *dynamodb.Client
@@ -32,14 +25,12 @@ func NewRequestRateLimitRepository(db *dynamodb.Client) *RequestRateLimitReposit
 	}
 }
 
-func (r *RequestRateLimitRepository) GetById(ctx context.Context, id string) (*AuthRateLimit, error) {
-	key := make(map[string]types.AttributeValue)
-	key["id"] = &types.AttributeValueMemberS{
-		Value: id,
-	}
+func (r *RequestRateLimitRepository) GetById(ctx context.Context, id string) (*entities.AuthRateLimit, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(r.TableName()),
-		Key:       key,
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{Value: id},
+		},
 	}
 	output, err := r.db.GetItem(ctx, input)
 	if err != nil {
@@ -48,14 +39,14 @@ func (r *RequestRateLimitRepository) GetById(ctx context.Context, id string) (*A
 	if len(output.Item) == 0 {
 		return nil, ErrRecordNotFound
 	}
-	var rateLimit AuthRateLimit
+	var rateLimit entities.AuthRateLimit
 	if err := attributevalue.UnmarshalMap(output.Item, &rateLimit); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal map: %w", err)
 	}
 	return &rateLimit, nil
 }
 
-func (r *RequestRateLimitRepository) PutItem(ctx context.Context, rateLimit *AuthRateLimit) error {
+func (r *RequestRateLimitRepository) PutItem(ctx context.Context, rateLimit *entities.AuthRateLimit) error {
 	av, err := attributevalue.MarshalMap(rateLimit)
 	if err != nil {
 		return fmt.Errorf("failed to marshal map: %w", err)
