@@ -4,6 +4,19 @@ frameworkVersion: "3"
 
 useDotenv: true
 
+plugins:
+  - serverless-domain-manager
+
+custom:
+  customDomain:
+    domainName: ${ssm:/web-page-summarizer/${self:provider.stage}/DOMAIN_NAME_BACKEND}
+    stage: ${self:provider.stage}
+    certificateArn: ${ssm:/web-page-summarizer/${self:provider.stage}/DOMAIN_CERTIFICATE_ARN}
+    createRoute53Record: true
+    endpointType: "regional"
+    securityPolicy: tls_1_2
+    apiType: rest
+
 provider:
   name: aws
   runtime: provided.al2
