@@ -54,7 +54,7 @@ func (c *CustomCognitoAuthorizerHandler) Handle(
 	if ok && apiKey == c.ApiKey {
 		return allowResponse, nil
 	}
-	authorization, ok := req.Headers["Authorization"]
+	authorization, ok := req.Headers["authorization"]
 	if !ok {
 		fmt.Printf("authorization header not found\n")
 		return events.APIGatewayCustomAuthorizerResponse{}, errors.New("Unauthorized")

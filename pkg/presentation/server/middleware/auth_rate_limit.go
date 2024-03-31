@@ -52,7 +52,7 @@ func (a *AuthRateLimitMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc
 				// APIKEYを持っている場合はリクエスト回数制限をかけない
 				return next(ctx)
 			}
-			authorizationHeader := ctx.Request().Header.Get("Authorization")
+			authorizationHeader := ctx.Request().Header.Get("authorization")
 			if authorizationHeader == "" {
 				return echo.NewHTTPError(401, "Authorization header is required")
 			}
