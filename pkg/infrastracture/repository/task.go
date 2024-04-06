@@ -8,6 +8,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/shoet/webpagesummary/pkg/infrastracture"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
 /*
@@ -25,13 +26,13 @@ func (r *TaskRepository) AddTask(ctx context.Context, tx infrastracture.Transact
 	now := time.Now()
 	query := `
 	INSERT INTO tasks
-		(task_id, task_status, title, page_url, created_at, updated_at)
+		(task_id, task_status, title, page_url, user_id, created_at, updated_at)
 	VALUES
-		($1, $2, $3, $4, $5, $6)
+		($1, $2, $3, $4, $5, $6, $7)
 	`
 	if _, err := tx.ExecContext(
 		ctx, query,
-		t.Id, t.TaskStatus, t.Title, t.PageUrl, now.Unix(), now.Unix(),
+		t.Id, t.TaskStatus, t.Title, t.PageUrl, t.UserId, now.Unix(), now.Unix(),
 	); err != nil {
 		return fmt.Errorf("failed ExecContext: %w", err)
 	}
@@ -68,11 +69,20 @@ type ListTaskInput struct {
 func (r *TaskRepository) ListTask(
 	ctx context.Context, tx infrastracture.Transactor, input *ListTaskInput,
 ) ([]*entities.Task, error) {
+	userSub, err := util.GetUserSub(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user sub: %w", err)
+	}
 
 	var builder *goqu.SelectDataset
 	builder = goqu.
 		From("tasks").
-		Select("id", "task_id", "task_status", "title", "page_url", "created_at", "updated_at")
+		Select("id", "task_id", "task_status", "title", "page_url", "user_id", "created_at", "updated_at")
+
+	if userSub != util.APIKeyUserSub {
+		// APIキーにリクエストでない場合は自分のデータのみ取得できる
+		builder = builder.Where(goqu.Ex{"user_id": userSub})
+	}
 
 	if input.Status != nil {
 		builder = builder.Where(goqu.Ex{"task_status": *input.Status})

@@ -12,6 +12,7 @@ type Summary struct {
 	PageUrl          string `json:"pageUrl" dynamodbav:"page_url,omitempty"`
 	Title            string `json:"title,omitempty" dynamodbav:"title,omitempty"`
 	Content          string `json:"content,omitempty" dynamodbav:"content,omitempty"`
+	UserId           string `json:"userId,omitempty" dynamodbav:"user_id,omitempty"`
 	Summary          string `json:"summary,omitempty" dynamodbav:"summary,omitempty"`
 	TaskFailedReason string `json:"taskFailedReason,omitempty" dynamodbav:"task_failed_reason,omitempty"`
 	CreatedAt        int64  `json:"createdAt" dynamodbav:"created_at,omitempty"`
@@ -30,6 +31,7 @@ type Task struct {
 	TaskStatus string `json:"taskStatus" db:"task_status"`
 	PageUrl    string `json:"pageUrl" db:"page_url"`
 	Title      string `json:"title" db:"title"`
+	UserId     string `json:"userId" db:"user_id"`
 	CreatedAt  uint   `json:"createdAt" db:"created_at"`
 	UpdatedAt  uint   `json:"updatedAt" db:"updated_at"`
 }

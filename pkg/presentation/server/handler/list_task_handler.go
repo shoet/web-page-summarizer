@@ -23,13 +23,13 @@ const (
 	defaultOffset int = 0
 )
 
-type PageNation struct {
+type Pagenation struct {
 	PageLimit  int `query:"limit"`
 	PageOffset int `query:"offset"`
 }
 
-func NewPageNation() PageNation {
-	return PageNation{
+func NewPagenation() Pagenation {
+	return Pagenation{
 		PageLimit:  defaultLimit,
 		PageOffset: defaultOffset,
 	}
@@ -40,11 +40,11 @@ func (l *ListTaskHandler) Handler(ctx echo.Context) error {
 
 	type Request struct {
 		Status *string `query:"status"`
-		PageNation
+		Pagenation
 	}
 
 	request := Request{
-		PageNation: NewPageNation(),
+		Pagenation: NewPagenation(),
 	}
 	if err := ctx.Bind(&request); err != nil {
 		ctx.Logger().Errorf("failed to Bind: %v", err)

@@ -2,10 +2,12 @@ package request_task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
 type SummaryRepository interface {
@@ -29,14 +31,21 @@ func NewUsecase(summaryRepository SummaryRepository, queueClient QueueClient) *U
 }
 
 func (u *Usecase) Run(ctx context.Context, url string) (taskID string, error error) {
+
+	userSub, err := util.GetUserSub(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user sub: %w", err)
+	}
+
 	id := uuid.New().String()
 	newSummaryTask := &entities.Summary{
 		Id:         id,
 		PageUrl:    url,
 		TaskStatus: "request",
 		CreatedAt:  time.Now().Unix(),
+		UserId:     userSub,
 	}
-	_, err := u.SummaryRepository.CreateSummary(ctx, newSummaryTask)
+	_, err = u.SummaryRepository.CreateSummary(ctx, newSummaryTask)
 	if err != nil {
 		return "", err
 	}

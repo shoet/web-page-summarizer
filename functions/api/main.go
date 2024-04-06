@@ -20,7 +20,6 @@ import (
 	"github.com/shoet/webpagesummary/pkg/infrastracture/repository"
 	"github.com/shoet/webpagesummary/pkg/presentation/server"
 	"github.com/shoet/webpagesummary/pkg/presentation/server/middleware"
-	"github.com/shoet/webpagesummary/pkg/testutil"
 )
 
 func ExitOnErr(err error) {
@@ -65,8 +64,11 @@ func BuildEchoServer() (*echo.Echo, error) {
 		cfg.APIKey,
 	)
 
+	setRequestContextMiddleware := middleware.NewSetRequestContextMiddleware(cfg.APIKey, cfg.CognitoJWKUrl)
+
 	deps, err := server.NewServerDependencies(
-		&cfg.Env, validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware,
+		&cfg.Env, validator, queueClient, ddb, rdbHandler,
+		cfg.GetCORSWhiteList(), rateLimitterMiddleware, setRequestContextMiddleware,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())
@@ -78,16 +80,16 @@ func BuildEchoServer() (*echo.Echo, error) {
 	}
 
 	// Local環境ではAuthorizerのエンドポイントを立てる
-	if cfg.Env == "local" {
-		cognitoConfig, err := testutil.LoadCognitoConfigLocal()
-		if err != nil {
-			return nil, fmt.Errorf("failed load cognito config: %s", err.Error())
-		}
-		srv, err = server.OnLocalServer(srv, cognitoConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed set local server: %s", err.Error())
-		}
-	}
+	// if cfg.Env == "local" {
+	// 	cognitoConfig, err := testutil.LoadCognitoConfigLocal()
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed load cognito config: %s", err.Error())
+	// 	}
+	// 	srv, err = server.OnLocalServer(srv, cognitoConfig)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed set local server: %s", err.Error())
+	// 	}
+	// }
 
 	return srv, err
 }
