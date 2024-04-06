@@ -71,7 +71,8 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server.POST("/get-summary", gsh.Handler)
 
 	sth := handler.NewSummaryTaskHandler(dep.Validator, dep.RequestSummaryUsecase)
-	server.POST("/task", dep.RateLimitterMiddleware.Handle(sth.Handler))
+	sthm := dep.RateLimitterMiddleware.Handle(sth.Handler)
+	server.POST("/task", sthm)
 
 	lth := handler.NewListTaskHandler(dep.ListTaskUsecase)
 	server.GET("/task", lth.Handler)

@@ -12,6 +12,7 @@ type Summary struct {
 	PageUrl          string `json:"pageUrl" dynamodbav:"page_url,omitempty"`
 	Title            string `json:"title,omitempty" dynamodbav:"title,omitempty"`
 	Content          string `json:"content,omitempty" dynamodbav:"content,omitempty"`
+	UserId           string `json:"userId,omitempty" dynamodbav:"user_id,omitempty"`
 	Summary          string `json:"summary,omitempty" dynamodbav:"summary,omitempty"`
 	TaskFailedReason string `json:"taskFailedReason,omitempty" dynamodbav:"task_failed_reason,omitempty"`
 	CreatedAt        int64  `json:"createdAt" dynamodbav:"created_at,omitempty"`
