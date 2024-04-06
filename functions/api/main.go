@@ -65,8 +65,11 @@ func BuildEchoServer() (*echo.Echo, error) {
 		cfg.APIKey,
 	)
 
+	setRequestContextMiddleware := middleware.NewSetRequestContextMiddleware(cfg.APIKey, cfg.CognitoJWKUrl)
+
 	deps, err := server.NewServerDependencies(
-		&cfg.Env, validator, queueClient, ddb, rdbHandler, cfg.GetCORSWhiteList(), rateLimitterMiddleware,
+		&cfg.Env, validator, queueClient, ddb, rdbHandler,
+		cfg.GetCORSWhiteList(), rateLimitterMiddleware, setRequestContextMiddleware,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed create server dependencies: %s", err.Error())

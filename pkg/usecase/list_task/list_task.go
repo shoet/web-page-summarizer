@@ -26,6 +26,7 @@ func NewUsecase(dbHandler *infrastracture.DBHandler, taskRepository TaskReposito
 }
 
 type UsecaseInput struct {
+	UserId string
 	Status *string
 	Limit  uint
 	Offset uint

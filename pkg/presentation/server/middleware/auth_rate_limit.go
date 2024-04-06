@@ -53,9 +53,6 @@ func (a *AuthRateLimitMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc
 		if a.Env == "prod" {
 			apiKey := ctx.Request().Header.Get("x-api-key")
 			if apiKey == a.APIKey {
-				// contextにAPIKeyを持っていることをセット
-				ctx.SetRequest(ctx.Request().WithContext(context.WithValue(ctx.Request().Context(), util.HasAPIKeyContextKey{}, true)))
-
 				// APIKEYを持っている場合はリクエスト回数制限をかけない
 				return next(ctx)
 			}
@@ -68,9 +65,6 @@ func (a *AuthRateLimitMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc
 			if err != nil {
 				return echo.NewHTTPError(401, "Invalid access token")
 			}
-
-			// contextにtokenSubをセット
-			ctx.SetRequest(ctx.Request().WithContext(context.WithValue(ctx.Request().Context(), util.TokenSubContextKey{}, tokenSub)))
 
 			rateLimit, err := a.RequestRateLimitRepository.GetById(ctx.Request().Context(), tokenSub)
 			if err != nil {

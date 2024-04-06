@@ -2,6 +2,7 @@ package request_task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,10 +32,9 @@ func NewUsecase(summaryRepository SummaryRepository, queueClient QueueClient) *U
 
 func (u *Usecase) Run(ctx context.Context, url string) (taskID string, error error) {
 
-	userSub, _ := ctx.Value(util.TokenSubContextKey{}).(string)
-	hasAPIKey, _ := ctx.Value(util.HasAPIKeyContextKey{}).(bool)
-	if hasAPIKey {
-		userSub = "apikey"
+	userSub, err := util.GetUserSub(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user sub: %w", err)
 	}
 
 	id := uuid.New().String()
@@ -45,7 +45,7 @@ func (u *Usecase) Run(ctx context.Context, url string) (taskID string, error err
 		CreatedAt:  time.Now().Unix(),
 		UserId:     userSub,
 	}
-	_, err := u.SummaryRepository.CreateSummary(ctx, newSummaryTask)
+	_, err = u.SummaryRepository.CreateSummary(ctx, newSummaryTask)
 	if err != nil {
 		return "", err
 	}

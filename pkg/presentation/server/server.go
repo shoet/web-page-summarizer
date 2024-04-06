@@ -21,13 +21,14 @@ import (
 )
 
 type ServerDependencies struct {
-	Env                    *string
-	Validator              *validator.Validate
-	GetSummaryUsecase      *get_summary.Usecase
-	RequestSummaryUsecase  *request_task.Usecase
-	ListTaskUsecase        *list_task.Usecase
-	CORSWhiteList          []string
-	RateLimitterMiddleware *middleware.AuthRateLimitMiddleware
+	Env                         *string
+	Validator                   *validator.Validate
+	GetSummaryUsecase           *get_summary.Usecase
+	RequestSummaryUsecase       *request_task.Usecase
+	ListTaskUsecase             *list_task.Usecase
+	CORSWhiteList               []string
+	RateLimitterMiddleware      *middleware.AuthRateLimitMiddleware
+	SetRequestContextMiddleware *middleware.SetRequestContextMiddleware
 }
 
 func NewServerDependencies(
@@ -38,6 +39,7 @@ func NewServerDependencies(
 	rdbHandler *infrastracture.DBHandler,
 	corsWhiteList []string,
 	rateLimitterMiddleware *middleware.AuthRateLimitMiddleware,
+	setRequestContextMiddleware *middleware.SetRequestContextMiddleware,
 ) (*ServerDependencies, error) {
 
 	summaryRepository := repository.NewSummaryRepository(ddbClient, env)
@@ -48,12 +50,13 @@ func NewServerDependencies(
 	listTaskUsecase := list_task.NewUsecase(rdbHandler, taskRepository)
 
 	return &ServerDependencies{
-		Validator:              validator,
-		GetSummaryUsecase:      getSummaryUsecase,
-		RequestSummaryUsecase:  requestTaskUsecase,
-		ListTaskUsecase:        listTaskUsecase,
-		CORSWhiteList:          corsWhiteList,
-		RateLimitterMiddleware: rateLimitterMiddleware,
+		Validator:                   validator,
+		GetSummaryUsecase:           getSummaryUsecase,
+		RequestSummaryUsecase:       requestTaskUsecase,
+		ListTaskUsecase:             listTaskUsecase,
+		CORSWhiteList:               corsWhiteList,
+		RateLimitterMiddleware:      rateLimitterMiddleware,
+		SetRequestContextMiddleware: setRequestContextMiddleware,
 	}, nil
 }
 
@@ -64,22 +67,24 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 	server.Use(echoMiddleware.Logger())
 	server.Use(middleware.NewSetHeaderMiddleware(dep.CORSWhiteList).Handle)
 
+	// ヘルスチェック
 	hch := handler.NewHealthCheckHandler()
 	server.GET("/health", hch.Handler)
 
+	// 単一アイテム取得
 	gsh := handler.NewGetSummaryHandler(dep.Validator, dep.GetSummaryUsecase)
 	server.POST("/get-summary", gsh.Handler)
 
+	// タスク依頼
 	sth := handler.NewSummaryTaskHandler(dep.Validator, dep.RequestSummaryUsecase)
-	sthm := dep.RateLimitterMiddleware.Handle(sth.Handler)
-	server.POST("/task", sthm)
-
-	lth := handler.NewListTaskHandler(dep.ListTaskUsecase)
-	server.GET("/task", lth.Handler)
+	sthm := dep.RateLimitterMiddleware.Handle(sth.Handler) // RateLimit
+	sthmm := dep.SetRequestContextMiddleware.Handle(sthm)
+	server.POST("/task", sthmm)
 
 	// 一覧取得
-	// パラメータstatus
-	// paging
+	lth := handler.NewListTaskHandler(dep.ListTaskUsecase)
+	lthm := dep.SetRequestContextMiddleware.Handle(lth.Handler)
+	server.GET("/task", lthm)
 
 	return server, nil
 }
