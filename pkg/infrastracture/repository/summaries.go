@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
 type SummaryRepository struct {
@@ -36,24 +37,38 @@ func (r *SummaryRepository) StatusIndexName() string {
 
 func (r *SummaryRepository) GetSummary(
 	ctx context.Context, id string) (*entities.Summary, error) {
-
-	output, err := r.db.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(r.TableName()),
-		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{Value: id},
-		},
-		AttributesToGet: []string{"id", "task_status", "page_url", "summary", "created_at"},
+	keyConditionExpression := ":id = id"
+	expressionAttributeValues := map[string]types.AttributeValue{
+		":id": &types.AttributeValueMemberS{Value: id},
+	}
+	userSub, err := util.GetUserSub(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetUserSub: %w", err)
+	}
+	if userSub != util.APIKeyUserSub {
+		// APIキーでのリクエスト出ない場合はuser_idでしか取得させない
+		keyConditionExpression += " and user_id = :user_id"
+		expressionAttributeValues[":user_id"] = &types.AttributeValueMemberS{Value: userSub}
+	}
+	output, err := r.db.Query(ctx, &dynamodb.QueryInput{
+		TableName:                 aws.String(r.TableName()),
+		KeyConditionExpression:    aws.String(keyConditionExpression),
+		ExpressionAttributeValues: expressionAttributeValues,
+		ProjectionExpression:      aws.String("id, task_status, page_url, summary, created_at"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed GetItem: %w", err)
 	}
 
-	var s entities.Summary
-	if err := attributevalue.UnmarshalMap(output.Item, &s); err != nil {
-		return nil, fmt.Errorf("failed UnmarshalMap: %w", err)
+	if len(output.Items) == 0 {
+		return nil, fmt.Errorf("not found")
 	}
 
-	return &s, nil
+	var s []*entities.Summary
+	if err := attributevalue.UnmarshalListOfMaps(output.Items, &s); err != nil {
+		return nil, fmt.Errorf("failed UnmarshalMap: %w", err)
+	}
+	return s[0], nil
 }
 
 type InputType string

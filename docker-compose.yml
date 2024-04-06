@@ -10,7 +10,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ENV: local
+      ENV: ${ENV:?err}
       QUEUE_URL: ${QUEUE_URL:?err}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?err}
       EXEC_TIMEOUT_SEC: 300
@@ -21,7 +21,7 @@ services:
       CORS_WHITE_LIST: http://localhost:5173
       COGNITO_JWK_URL: ${COGNITO_JWK_URL:?err}
       BROWSER_PATH: dummy
-      API_KEY: dummy
+      API_KEY: ${API_KEY:?err}
 
     volumes:
       - .:/app

@@ -77,8 +77,12 @@ func (r *TaskRepository) ListTask(
 	var builder *goqu.SelectDataset
 	builder = goqu.
 		From("tasks").
-		Select("id", "task_id", "task_status", "title", "page_url", "user_id", "created_at", "updated_at").
-		Where(goqu.Ex{"user_id": userSub})
+		Select("id", "task_id", "task_status", "title", "page_url", "user_id", "created_at", "updated_at")
+
+	if userSub != util.APIKeyUserSub {
+		// APIキーにリクエストでない場合は自分のデータのみ取得できる
+		builder = builder.Where(goqu.Ex{"user_id": userSub})
+	}
 
 	if input.Status != nil {
 		builder = builder.Where(goqu.Ex{"task_status": *input.Status})

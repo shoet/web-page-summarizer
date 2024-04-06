@@ -73,7 +73,8 @@ func NewServer(dep *ServerDependencies) (*echo.Echo, error) {
 
 	// 単一アイテム取得
 	gsh := handler.NewGetSummaryHandler(dep.Validator, dep.GetSummaryUsecase)
-	server.POST("/get-summary", gsh.Handler)
+	gshm := dep.SetRequestContextMiddleware.Handle(gsh.Handler)
+	server.POST("/get-summary", gshm)
 
 	// タスク依頼
 	sth := handler.NewSummaryTaskHandler(dep.Validator, dep.RequestSummaryUsecase)

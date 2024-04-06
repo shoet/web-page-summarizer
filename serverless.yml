@@ -186,9 +186,13 @@ resources:
             AttributeType: S
           - AttributeName: task_status
             AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
         KeySchema:
           - AttributeName: id
             KeyType: HASH
+          - AttributeName: user_id
+            KeyType: RANGE
         GlobalSecondaryIndexes:
           - IndexName: StatusIndex
             KeySchema:
