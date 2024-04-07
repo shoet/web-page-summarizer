@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
-	"github.com/shoet/webpagesummary/pkg/util"
 )
 
 type SummaryRepository struct {
@@ -36,25 +35,21 @@ func (r *SummaryRepository) StatusIndexName() string {
 }
 
 func (r *SummaryRepository) GetSummary(
-	ctx context.Context, id string) (*entities.Summary, error) {
+	ctx context.Context, id string, userId *string) (*entities.Summary, error) {
 	keyConditionExpression := ":id = id"
 	expressionAttributeValues := map[string]types.AttributeValue{
 		":id": &types.AttributeValueMemberS{Value: id},
 	}
-	userSub, err := util.GetUserSub(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed GetUserSub: %w", err)
-	}
-	if userSub != util.APIKeyUserSub {
+	if userId != nil {
 		// APIキーでのリクエスト出ない場合はuser_idでしか取得させない
 		keyConditionExpression += " and user_id = :user_id"
-		expressionAttributeValues[":user_id"] = &types.AttributeValueMemberS{Value: userSub}
+		expressionAttributeValues[":user_id"] = &types.AttributeValueMemberS{Value: *userId}
 	}
 	output, err := r.db.Query(ctx, &dynamodb.QueryInput{
 		TableName:                 aws.String(r.TableName()),
 		KeyConditionExpression:    aws.String(keyConditionExpression),
 		ExpressionAttributeValues: expressionAttributeValues,
-		ProjectionExpression:      aws.String("id, task_status, page_url, summary, created_at"),
+		ProjectionExpression:      aws.String("id, task_status, page_url, summary, user_id, created_at"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed GetItem: %w", err)
@@ -229,7 +224,8 @@ func (r *SummaryRepository) UpdateSummary(ctx context.Context, summary *entities
 	updateExpression := "SET"
 	expressionAttributeValues := map[string]types.AttributeValue{}
 	for k, v := range av {
-		if k != "id" {
+		// key項目は更新対象に含めない
+		if k != "id" && k != "user_id" {
 			updateExpression += fmt.Sprintf(" %s = :%s,", k, k)
 			expressionAttributeValues[":"+k] = v
 		}
@@ -237,8 +233,11 @@ func (r *SummaryRepository) UpdateSummary(ctx context.Context, summary *entities
 	updateExpression = strings.TrimRight(updateExpression, ",")
 
 	updateInput := &dynamodb.UpdateItemInput{
-		TableName:                 aws.String(r.TableName()),
-		Key:                       map[string]types.AttributeValue{"id": &types.AttributeValueMemberS{Value: summary.Id}},
+		TableName: aws.String(r.TableName()),
+		Key: map[string]types.AttributeValue{
+			"id":      &types.AttributeValueMemberS{Value: summary.Id},
+			"user_id": &types.AttributeValueMemberS{Value: summary.UserId},
+		},
 		UpdateExpression:          aws.String(updateExpression),
 		ExpressionAttributeValues: expressionAttributeValues,
 		ConditionExpression:       aws.String("attribute_exists(id)"),

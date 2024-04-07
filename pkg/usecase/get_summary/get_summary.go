@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/shoet/webpagesummary/pkg/infrastracture/entities"
+	"github.com/shoet/webpagesummary/pkg/util"
 )
 
 type SummaryRepository interface {
-	GetSummary(ctx context.Context, id string) (*entities.Summary, error)
+	GetSummary(ctx context.Context, id string, userId *string) (*entities.Summary, error)
 }
 
 type Usecase struct {
@@ -20,7 +21,15 @@ func NewUsecase(summaryRepository SummaryRepository) *Usecase {
 }
 
 func (u *Usecase) Run(ctx context.Context, taskId string) (*entities.Summary, error) {
-	summary, err := u.SummaryRepository.GetSummary(ctx, taskId)
+	var userIdPtr *string
+	userId, err := util.GetUserSub(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetUserSub: %w", err)
+	}
+	if userId != util.APIKeyUserSub {
+		userIdPtr = &userId
+	}
+	summary, err := u.SummaryRepository.GetSummary(ctx, taskId, userIdPtr)
 	if err != nil {
 		return nil, fmt.Errorf("failed get summary: %w", err)
 	}

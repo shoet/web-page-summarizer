@@ -43,7 +43,7 @@ func (st *SummaryTask) ExecuteSummaryTask(ctx context.Context, taskId string) er
 
 	// get task from dynamodb
 	logger.Info("get task from dynamodb")
-	s, err := st.repo.GetSummary(ctx, taskId)
+	s, err := st.repo.GetSummary(ctx, taskId, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get summary: %w", err)
 	}
